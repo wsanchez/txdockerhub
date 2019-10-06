@@ -17,4 +17,4 @@ It requires Python 3.6 or later.
 .. ------------------------------------------------------------------------- ..
 
 .. _Twisted: https://twistedmatrix.com/
-.. _Docker_Hub_API: https://docs.docker.com/registry/spec/api/
+.. _Docker Hub API: https://docs.docker.com/registry/spec/api/
