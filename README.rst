@@ -1,5 +1,5 @@
-txdockerhub: Docker_Hub_API_ Client
-===================================
+txdockerhub: Docker Hub API Client
+==================================
 
 .. image:: https://github.com/wsanchez/txdockerhub/workflows/CI%2fCD/badge.svg
     :target: https://github.com/wsanchez/txdockerhub/actions
@@ -17,4 +17,4 @@ It requires Python 3.6 or later.
 .. ------------------------------------------------------------------------- ..
 
 .. _Twisted: https://twistedmatrix.com/
-.. _HubAPI: https://docs.docker.com/registry/spec/api/
+.. _Docker_Hub_API: https://docs.docker.com/registry/spec/api/
