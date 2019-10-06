@@ -11,7 +11,7 @@ txdockerhub: Docker Hub API Client
     :target: https://requires.io/github/wsanchez/txdockerhub/requirements/?branch=master
     :alt: Requirements Status
 
-This module is implements an asynchronous client for the Docker_Hub_API_ using Twisted_.
+This module is implements an asynchronous client for the `Docker Hub API`_ using Twisted_.
 It requires Python 3.6 or later.
 
 .. ------------------------------------------------------------------------- ..
