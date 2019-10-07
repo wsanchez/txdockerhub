@@ -218,8 +218,9 @@ class V2ClientTests(SynchronousTestCase):
 
     def test_validateRepositoryNameComponent_empty(self) -> None:
         """
-        V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name path component.
+        V2Client.validateRepositoryNameComponent() raises
+        InvalidRepositoryNameError if given an empty repository name path
+        component.
         """
         e = self.assertRaises(
             InvalidRepositoryNameError,
@@ -233,7 +234,7 @@ class V2ClientTests(SynchronousTestCase):
     @given(
         sampled_from(V2Client.componentCharacters),
         text(
-            alphabet=V2Client.componentCharacters,
+            alphabet=V2Client.componentAlphabet,
             min_size=(V2Client.maxComponentLength - 1),
         ),
         sampled_from(V2Client.componentCharacters),
@@ -243,7 +244,7 @@ class V2ClientTests(SynchronousTestCase):
     ) -> None:
         """
         V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name path component.
+        if given a repository name path component that is too long.
         """
         component = f"{first}{middle}{last}"
 
@@ -410,6 +411,18 @@ class V2ClientTests(SynchronousTestCase):
             )
         else:
             self.assertRegex(component, componentRegex)
+
+
+    def test_validateRepositoryName_empty(self) -> None:
+        """
+        V2Client.validateRepositoryName() raises InvalidRepositoryNameError
+        if given an empty repository name.
+        """
+        e = self.assertRaises(
+            InvalidRepositoryNameError,
+            V2Client.validateRepositoryName, "",
+        )
+        self.assertEqual(str(e), "repository name may not be empty")
 
 
     @given(repositoryNames())
