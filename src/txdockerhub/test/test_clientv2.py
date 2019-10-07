@@ -19,23 +19,28 @@ Tests for L{txdockerhub._clientv2}.
 """
 
 from re import compile as regexCompile
-from typing import Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence
 
-from hypothesis import assume, given, note
+from hypothesis import HealthCheck, assume, given, note, settings
 from hypothesis.searchstrategy import SearchStrategy
 from hypothesis.strategies import (
-    characters, composite, just, lists, one_of, sampled_from, text, tuples
+    characters, composite, data, integers, just, lists,
+    one_of, sampled_from, text, tuples,
 )
 
 from twisted.trial.unittest import SynchronousTestCase
 
 from .._clientv2 import InvalidRepositoryNameError, V2Client
 
+# FIXME: Not publicly available from hypothesis
+DataStrategy = Any
+
 
 __all__ = ()
 
 
-componentRegex = regexCompile("^[a-z0-9]+(?:[._-][a-z0-9]+)*$")
+componentRegexText = "[a-z0-9]+(?:[._-][a-z0-9]+)*"
+componentRegex = regexCompile(f"^{componentRegexText}$")
 
 
 #
@@ -73,8 +78,8 @@ def components(
 
     # Add a separator and one or more characters up to max_size
     while True:
-        maxLength = max_size - len(component)
-        if maxLength < 2:
+        maxLength = max_size - len(component) - 1
+        if maxLength < 1:
             # No room left
             break
 
@@ -83,7 +88,7 @@ def components(
                 just(""),  # Opportunity to stop before max_size
                 tuples(
                     componentSeparators(),
-                    componentText(max_size=(maxLength - 1)),
+                    componentText(max_size=maxLength),
                 ),
             )
         )
@@ -97,29 +102,26 @@ def components(
 
 @composite
 def repositoryNames(
-    draw: Callable,
-    min_size: int = 1, max_size: int = V2Client.maxRepositoryNameLength,
+    draw: Callable, max_size: int = V2Client.maxRepositoryNameLength
 ) -> str:
     """
     Strategy that generates repository names.
     """
     name: str = draw(components())
 
+    # Add a separator and one or more characters up to max_size
     while True:
-        maxComponentSize = min(
-            V2Client.maxComponentLength,
-            max_size - len(name) - 1
-        )
-        if maxComponentSize <= 0:
+        maxLength = min(V2Client.maxComponentLength, max_size - len(name) - 1)
+        if maxLength < 1:
+            # No room left
             break
 
-        strategy = components(max_size=maxComponentSize)
-        if len(name) >= min_size:
-            strategy = one_of(
+        component: str = draw(
+            one_of(
                 just(""),  # Opportunity to stop before max_size
-                strategy,
+                components(max_size=maxLength),
             )
-        component: str = draw(strategy)
+        )
         if not component:
             break
 
@@ -134,14 +136,17 @@ class StrategyTests(SynchronousTestCase):
     Tests for test strategies.
     """
 
-    @given(components())
-    def test_components_length(self, component: str) -> None:
+    @given(data())
+    def test_components_length(self, data: DataStrategy) -> None:
         """
-        Generated repository name path components may not be empty or exceed
-        the maximum size.
+        Generated repository name path components may exceed the given size
+        bounds.
         """
-        self.assertGreater(len(component), 0)
-        self.assertLessEqual(len(component), V2Client.maxComponentLength)
+        max_size = data.draw(integers(min_value=1), label="max_size")
+        component = data.draw(components(max_size=max_size), label="component")
+
+        self.assertGreaterEqual(len(component), 1)
+        self.assertLessEqual(len(component), max_size)
 
 
     @given(components())
@@ -153,11 +158,14 @@ class StrategyTests(SynchronousTestCase):
         self.assertRegex(component, componentRegex)
 
 
-    @given(repositoryNames())
-    def test_repositoryNames_length(self, name: str) -> None:
+    @given(data())
+    def test_repositoryNames_length(self, data: DataStrategy) -> None:
         """
         Generated repository names may not be empty or exceed the maximum size.
         """
+        max_size = data.draw(integers(min_value=1), label="max_size")
+        name = data.draw(repositoryNames(max_size=max_size), label="name")
+
         self.assertGreater(len(name), 0)
         self.assertLessEqual(len(name), V2Client.maxRepositoryNameLength)
 
@@ -244,6 +252,7 @@ class V2ClientTests(SynchronousTestCase):
         text(
             alphabet=V2Client.componentAlphabet,
             min_size=(V2Client.maxComponentLength - 1),
+            max_size=(V2Client.maxComponentLength + 1),
         ),
         sampled_from(V2Client.componentCharacters),
     )
@@ -340,7 +349,7 @@ class V2ClientTests(SynchronousTestCase):
 
     @given(
         componentText(max_size=(V2Client.maxComponentLength - 1)),
-        sampled_from(V2Client.componentSeparators),
+        componentSeparators(),
     )
     def test_validateRepositoryNameComponent_trailingSeparator(
         self, prefix: str, last: str
@@ -439,7 +448,11 @@ class V2ClientTests(SynchronousTestCase):
 
     @given(
         sampled_from(V2Client.componentCharacters),
-        repositoryNames(min_size=(V2Client.maxRepositoryNameLength - 1)),
+        text(
+            alphabet=V2Client.componentAlphabet,
+            min_size=(V2Client.maxRepositoryNameLength - 1),
+            max_size=(V2Client.maxRepositoryNameLength + 1),
+        ),
         sampled_from(V2Client.componentCharacters),
     )
     def test_validateRepositoryName_tooLong(
