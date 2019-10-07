@@ -215,7 +215,7 @@ class V2ClientTests(SynchronousTestCase):
     @given(components())
     def test_validateRepositoryNameComponent(self, component: str) -> None:
         """
-        V2Client.repositoryNameComponents() does not raise
+        V2Client.validateRepositoryNameComponent() does not raise
         InvalidRepositoryNameError for valid repository name path components.
         """
         try:
@@ -251,8 +251,9 @@ class V2ClientTests(SynchronousTestCase):
         self, first: str, middle: str, last: str
     ) -> None:
         """
-        V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given a repository name path component that is too long.
+        V2Client.validateRepositoryNameComponent() raises
+        InvalidRepositoryNameError if given a repository name path component
+        that is too long.
         """
         component = f"{first}{middle}{last}"
 
@@ -283,9 +284,10 @@ class V2ClientTests(SynchronousTestCase):
         self, prefix: str, suffix: str
     ) -> None:
         """
-        V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name path component beginning with
-        a character that is not a lowercase alphanumeric character.
+        V2Client.validateRepositoryNameComponent() raises
+        InvalidRepositoryNameError if given an empty repository name path
+        component beginning with a character that is not a lowercase
+        alphanumeric character.
         """
         component = f"{prefix}{suffix}"
         note(f"Component is {component!r}")
@@ -316,9 +318,9 @@ class V2ClientTests(SynchronousTestCase):
         self, prefix: str, junk: str, last: str
     ) -> None:
         """
-        V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name path component containing invalid
-        characters.
+        V2Client.validateRepositoryNameComponent() raises
+        InvalidRepositoryNameError if given an empty repository name path
+        component containing invalid characters.
         """
         component = f"{prefix}{junk}{last}"
         assume(len(component) < V2Client.maxComponentLength)
@@ -344,9 +346,10 @@ class V2ClientTests(SynchronousTestCase):
         self, prefix: str, last: str
     ) -> None:
         """
-        V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name path component ending with
-        a character that is not a lowercase alphanumeric character.
+        V2Client.validateRepositoryNameComponent() raises
+        InvalidRepositoryNameError if given an empty repository name path
+        component ending with a character that is not a lowercase alphanumeric
+        character.
         """
         component = f"{prefix}{last}"
         note(f"Component is {component!r}")
@@ -374,9 +377,10 @@ class V2ClientTests(SynchronousTestCase):
         self, first: str, prefix: str, separators: str, suffix: str, last: str
     ) -> None:
         """
-        V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name path component containing a run of
-        more than one component separator character.
+        V2Client.validateRepositoryNameComponent() raises
+        InvalidRepositoryNameError if given an empty repository name path
+        component containing a run of more than one component separator
+        character.
         """
         component = f"{first}{prefix}{separators}{suffix}{last}"
         assume(len(component) < V2Client.maxComponentLength)
@@ -400,9 +404,9 @@ class V2ClientTests(SynchronousTestCase):
         self, component: str
     ) -> None:
         """
-        V2Client.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name path that does not match the
-        required regular expression.
+        V2Client.validateRepositoryNameComponent() raises
+        InvalidRepositoryNameError if given an empty repository name path that
+        does not match the required regular expression.
         """
         # This is a simpler test than the above component tests and should
         # cover them all, but without testing specific error messages.
