@@ -21,7 +21,7 @@ Tests for L{txdockerhub._clientv2}.
 from re import compile as regexCompile
 from typing import Any, Callable, Optional, Sequence
 
-from hypothesis import HealthCheck, assume, given, note, settings
+from hypothesis import assume, given, note
 from hypothesis.searchstrategy import SearchStrategy
 from hypothesis.strategies import (
     characters, composite, data, integers, just, lists,
@@ -41,6 +41,9 @@ __all__ = ()
 
 componentRegexText = "[a-z0-9]+(?:[._-][a-z0-9]+)*"
 componentRegex = regexCompile(f"^{componentRegexText}$")
+
+repositoryNameRegexText = f"{componentRegexText}(?:{componentRegexText})*"
+repositoryNameRegex = regexCompile(f"^{repositoryNameRegexText}$")
 
 
 #
@@ -414,8 +417,8 @@ class V2ClientTests(SynchronousTestCase):
     ) -> None:
         """
         V2Client.validateRepositoryNameComponent() raises
-        InvalidRepositoryNameError if given an empty repository name path that
-        does not match the required regular expression.
+        InvalidRepositoryNameError if given a repository name path component
+        that does not match the required regular expression.
         """
         # This is a simpler test than the above component tests and should
         # cover them all, but without testing specific error messages.
@@ -474,6 +477,26 @@ class V2ClientTests(SynchronousTestCase):
                 f"{V2Client.maxRepositoryNameLength} characters"
             ),
         )
+
+
+    @given(text(min_size=1))
+    def test_validateRepositoryName_regex(self, name: str) -> None:
+        """
+        V2Client.validateRepositoryName() raises InvalidRepositoryNameError if
+        given a repository name that does not match the required regular
+        expression.
+        """
+        try:
+            V2Client.validateRepositoryName(name)
+        except InvalidRepositoryNameError as e:
+            self.assertNotRegex(
+                name, componentRegex, (
+                    f"{name!r} matches {repositoryNameRegex!r} but raised"
+                    f"InvalidRepositoryNameError: {e}"
+                )
+            )
+        else:
+            self.assertRegex(name, repositoryNameRegex)
 
 
     @given(repositoryNames())
