@@ -97,7 +97,8 @@ def components(
 
 @composite
 def repositoryNames(
-    draw: Callable, max_size: int = V2Client.maxRepositoryNameLength
+    draw: Callable,
+    min_size: int = 1, max_size: int = V2Client.maxRepositoryNameLength,
 ) -> str:
     """
     Strategy that generates repository names.
@@ -105,15 +106,20 @@ def repositoryNames(
     name: str = draw(components())
 
     while True:
-        component: str = draw(
-            one_of(
-                just(""),  # Opportunity to stop before max_size
-                components(max_size=min(
-                    V2Client.maxComponentLength,
-                    max_size - len(name) - 1),
-                ),
-            )
+        maxComponentSize = min(
+            V2Client.maxComponentLength,
+            max_size - len(name) - 1
         )
+        if maxComponentSize <= 0:
+            break
+
+        strategy = components(max_size=maxComponentSize)
+        if len(name) >= min_size:
+            strategy = one_of(
+                just(""),  # Opportunity to stop before max_size
+                strategy,
+            )
+        component: str = draw(strategy)
         if not component:
             break
 
@@ -425,6 +431,32 @@ class V2ClientTests(SynchronousTestCase):
             V2Client.validateRepositoryName, "",
         )
         self.assertEqual(str(e), "repository name may not be empty")
+
+
+    @given(
+        sampled_from(V2Client.componentCharacters),
+        repositoryNames(min_size=(V2Client.maxRepositoryNameLength - 1)),
+        sampled_from(V2Client.componentCharacters),
+    )
+    def test_validateRepositoryName_tooLong(
+        self, first: str, middle: str, last: str
+    ) -> None:
+        """
+        V2Client.validateRepositoryName() raises InvalidRepositoryNameError
+        if given a repository name that is too long.
+        """
+        name = f"{first}{middle}{last}"
+
+        e = self.assertRaises(
+            InvalidRepositoryNameError,
+            V2Client.validateRepositoryName, name,
+        )
+        self.assertEqual(
+            str(e), (
+                f"repository name may not exceed "
+                f"{V2Client.maxRepositoryNameLength} characters"
+            ),
+        )
 
 
     @given(repositoryNames())
