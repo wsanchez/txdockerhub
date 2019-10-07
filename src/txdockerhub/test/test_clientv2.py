@@ -181,7 +181,7 @@ class StrategyTests(SynchronousTestCase):
         for component in name.split(V2Client.repositoryNameSeparator):
             try:
                 V2Client.validateRepositoryNameComponent(component)
-            except InvalidRepositoryNameError as e:
+            except InvalidRepositoryNameError as e:  # pragma: no cover
                 self.fail(
                     f"Invalid path component {component!r} "
                     f"in repository name {name!r}: {e}"
@@ -231,7 +231,7 @@ class V2ClientTests(SynchronousTestCase):
         """
         try:
             V2Client.validateRepositoryNameComponent(component)
-        except InvalidRepositoryNameError as e:
+        except InvalidRepositoryNameError as e:  # pragma: no cover
             self.fail(f"Unexpected InvalidRepositoryNameError: {e}")
 
 
