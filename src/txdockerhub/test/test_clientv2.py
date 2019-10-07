@@ -80,7 +80,7 @@ def components(
 
         rest: str = draw(
             one_of(
-                just(""),
+                just(""),  # Opportunity to stop before max_size
                 tuples(
                     componentSeparators(),
                     componentText(max_size=(maxLength - 1)),
@@ -96,26 +96,28 @@ def components(
 
 
 @composite
-def repositoryNames(draw: Callable) -> str:
+def repositoryNames(
+    draw: Callable, max_size: int = V2Client.maxRepositoryNameLength
+) -> str:
     """
     Strategy that generates repository names.
     """
-    maxNameLength = V2Client.maxRepositoryNameLength
-
     name: str = draw(components())
 
     while True:
-        component: str = draw(one_of(just(""), components()))
+        component: str = draw(
+            one_of(
+                just(""),  # Opportunity to stop before max_size
+                components(max_size=min(
+                    V2Client.maxComponentLength,
+                    max_size - len(name) - 1),
+                ),
+            )
+        )
         if not component:
             break
 
-        separator = draw(sampled_from(V2Client.repositoryNameSeparator))
-
-        if len(name) + len(component) + 1 > maxNameLength:
-            # Not enough room left
-            break
-
-        name += f"{separator}{component}"
+        name += f"{V2Client.repositoryNameSeparator}{component}"
 
     return name
 
