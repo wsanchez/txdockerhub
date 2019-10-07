@@ -139,8 +139,8 @@ class StrategyTests(SynchronousTestCase):
     @given(data())
     def test_components_length(self, data: DataStrategy) -> None:
         """
-        Generated repository name path components may exceed the given size
-        bounds.
+        Generated repository name path components may not exceed the allowed
+        size bounds.
         """
         max_size = data.draw(integers(min_value=1), label="max_size")
         component = data.draw(components(max_size=max_size), label="component")
@@ -159,9 +159,9 @@ class StrategyTests(SynchronousTestCase):
 
 
     @given(data())
-    def test_repositoryNames_length(self, data: DataStrategy) -> None:
+    def test_repositoryNames_maxLength(self, data: DataStrategy) -> None:
         """
-        Generated repository names may not be empty or exceed the maximum size.
+        Generated repository name may not exceed the allowed size bounds.
         """
         max_size = data.draw(integers(min_value=1), label="max_size")
         name = data.draw(repositoryNames(max_size=max_size), label="name")
@@ -256,13 +256,13 @@ class V2ClientTests(SynchronousTestCase):
         ),
         sampled_from(V2Client.componentCharacters),
     )
-    def test_validateRepositoryNameComponent_tooLong(
+    def test_validateRepositoryNameComponent_maxLength(
         self, first: str, middle: str, last: str
     ) -> None:
         """
         V2Client.validateRepositoryNameComponent() raises
         InvalidRepositoryNameError if given a repository name path component
-        that is too long.
+        exceeds the allowed maximum size.
         """
         component = f"{first}{middle}{last}"
 
@@ -455,12 +455,12 @@ class V2ClientTests(SynchronousTestCase):
         ),
         sampled_from(V2Client.componentCharacters),
     )
-    def test_validateRepositoryName_tooLong(
+    def test_validateRepositoryName_maxLength(
         self, first: str, middle: str, last: str
     ) -> None:
         """
         V2Client.validateRepositoryName() raises InvalidRepositoryNameError
-        if given a repository name that is too long.
+        if given a repository name exceeds the allowed maximum size.
         """
         name = f"{first}{middle}{last}"
 
