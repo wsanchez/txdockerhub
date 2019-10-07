@@ -109,11 +109,18 @@ setup_requirements = []
 
 install_requirements = [
     # Direct dependencies
-    "attrs==19.1.0",
+    "attrs==19.2.0",
     "hyperlink==19.0.0",
     "Twisted==19.7.0",
 
     # Indirect dependencies
+    "Automat==0.7.0",
+    "constantly==15.1.0",
+    "idna==2.8",
+    "incremental==17.5.0",
+    "PyHamcrest==1.9.0",
+    "six==1.12.0",
+    "zope.interface==4.6.0",
 ]
 
 extras_requirements = {}
