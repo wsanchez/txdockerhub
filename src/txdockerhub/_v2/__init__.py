@@ -20,4 +20,15 @@ Docker Hub API v2 Client
 See: https://docs.docker.com/registry/spec/api/
 """
 
-__all__ = ()
+from ._client import Client
+from ._error import Error, ErrorCode
+from ._repository import InvalidRepositoryNameError, Repository
+
+
+__all__ = (
+    "Client",
+    "Error",
+    "ErrorCode",
+    "InvalidRepositoryNameError",
+    "Repository",
+)
