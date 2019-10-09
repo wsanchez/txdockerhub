@@ -16,4 +16,8 @@
 
 """
 Docker Hub API v2 Client
+
+See: https://docs.docker.com/registry/spec/api/
 """
+
+__all__ = ()
