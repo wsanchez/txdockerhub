@@ -64,7 +64,7 @@ class Repository(object):
         """
         if not name:
             raise InvalidRepositoryNameError(
-                f"repository name may not be empty"
+                f"Repository name may not be empty"
             )
         return name.split(cls.nameSeparator)
 

@@ -18,4 +18,15 @@
 Tests for txdockerhub._clientv2.
 """
 
+from hypothesis import HealthCheck, settings
+
+
 __all__ = ()
+
+
+settings.register_profile(
+    "ci",
+    deadline=None,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+settings.load_profile("ci")

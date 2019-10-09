@@ -186,7 +186,7 @@ class StrategyTests(SynchronousTestCase):
                 Repository.validateNamePathComponent(component)
             except InvalidRepositoryNameError as e:  # pragma: no cover
                 self.fail(
-                    f"Invalid path component {component!r} "
+                    f"invalid path component {component!r} "
                     f"in repository name {name!r}: {e}"
                 )
 
@@ -235,7 +235,10 @@ class RepositoryTests(SynchronousTestCase):
         try:
             Repository.validateNamePathComponent(component)
         except InvalidRepositoryNameError as e:  # pragma: no cover
-            self.fail(f"Unexpected InvalidRepositoryNameError: {e}")
+            self.fail(
+                f"unexpected InvalidRepositoryNameError for component "
+                f"{component!r}: {e}"
+            )
 
 
     def test_validateNamePathComponent_empty(self) -> None:
