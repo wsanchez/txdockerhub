@@ -57,21 +57,21 @@ def componentText(
     Strategy that generates repository name path components without separators.
     """
     return text(
-        alphabet=Repository.componentCharacters,
+        alphabet=Repository.pathComponentCharacters,
         min_size=min_size, max_size=max_size,
     )
 
 
-def componentSeparators() -> SearchStrategy:  # str
+def pathComponentSeparators() -> SearchStrategy:  # str
     """
     Strategy that generates repository name path component separators.
     """
-    return sampled_from(Repository.componentSeparators)
+    return sampled_from(Repository.pathComponentSeparators)
 
 
 @composite
 def components(
-    draw: Callable, max_size: int = Repository.maxComponentLength
+    draw: Callable, max_size: int = Repository.maxPathComponentLength
 ) -> str:
     """
     Strategy that generates repository name path components.
@@ -90,7 +90,7 @@ def components(
             one_of(
                 just(""),  # Opportunity to stop before max_size
                 tuples(
-                    componentSeparators(),
+                    pathComponentSeparators(),
                     componentText(max_size=maxLength),
                 ),
             )
@@ -105,7 +105,7 @@ def components(
 
 @composite
 def repositoryNames(
-    draw: Callable, max_size: int = Repository.maxRepositoryNameLength
+    draw: Callable, max_size: int = Repository.maxNameLength
 ) -> str:
     """
     Strategy that generates repository names.
@@ -115,7 +115,7 @@ def repositoryNames(
     # Add a separator and one or more characters up to max_size
     while True:
         maxLength = min(
-            Repository.maxComponentLength,
+            Repository.maxPathComponentLength,
             max_size - len(name) - 1,
         )
         if maxLength < 1:
@@ -131,7 +131,7 @@ def repositoryNames(
         if not component:
             break
 
-        name += f"{Repository.repositoryNameSeparator}{component}"
+        name += f"{Repository.nameSeparator}{component}"
 
     return name
 
@@ -173,7 +173,7 @@ class StrategyTests(SynchronousTestCase):
         name = data.draw(repositoryNames(max_size=max_size), label="name")
 
         self.assertGreater(len(name), 0)
-        self.assertLessEqual(len(name), Repository.maxRepositoryNameLength)
+        self.assertLessEqual(len(name), Repository.maxNameLength)
 
 
     @given(repositoryNames())
@@ -181,9 +181,9 @@ class StrategyTests(SynchronousTestCase):
         """
         Generated repository names are composed of valid components.
         """
-        for component in name.split(Repository.repositoryNameSeparator):
+        for component in name.split(Repository.nameSeparator):
             try:
-                Repository.validateRepositoryNameComponent(component)
+                Repository.validateNamePathComponent(component)
             except InvalidRepositoryNameError as e:  # pragma: no cover
                 self.fail(
                     f"Invalid path component {component!r} "
@@ -202,51 +202,51 @@ class RepositoryTests(SynchronousTestCase):
     """
 
     @given(lists(components(), min_size=1))
-    def test_repositoryNameComponents(
+    def test_namePathComponents(
         self, componentsIn: Sequence[str]
     ) -> None:
         """
-        Repository.repositoryNameComponents() properly splits a repository name
-        into its path components.
+        Repository.namePathComponents() properly splits a repository name into
+        its path components.
         """
-        name = Repository.repositoryNameSeparator.join(componentsIn)
-        componentsOut = Repository.repositoryNameComponents(name)
+        name = Repository.nameSeparator.join(componentsIn)
+        componentsOut = Repository.namePathComponents(name)
         self.assertSequenceEqual(componentsIn, componentsOut)
 
 
-    def test_repositoryNameComponents_empty(self) -> None:
+    def test_namePathComponents_empty(self) -> None:
         """
-        Repository.repositoryNameComponents() raises InvalidRepositoryNameError
-        if given an empty repository name.
+        Repository.namePathComponents() raises InvalidRepositoryNameError if
+        given an empty repository name.
         """
         e = self.assertRaises(
             InvalidRepositoryNameError,
-            Repository.repositoryNameComponents, "",
+            Repository.namePathComponents, "",
         )
         self.assertEqual(str(e), "repository name may not be empty")
 
 
     @given(components())
-    def test_validateRepositoryNameComponent(self, component: str) -> None:
+    def test_validateNamePathComponent(self, component: str) -> None:
         """
-        Repository.validateRepositoryNameComponent() does not raise
+        Repository.validateNamePathComponent() does not raise
         InvalidRepositoryNameError for valid repository name path components.
         """
         try:
-            Repository.validateRepositoryNameComponent(component)
+            Repository.validateNamePathComponent(component)
         except InvalidRepositoryNameError as e:  # pragma: no cover
             self.fail(f"Unexpected InvalidRepositoryNameError: {e}")
 
 
-    def test_validateRepositoryNameComponent_empty(self) -> None:
+    def test_validateNamePathComponent_empty(self) -> None:
         """
-        Repository.validateRepositoryNameComponent() raises
+        Repository.validateNamePathComponent() raises
         InvalidRepositoryNameError if given an empty repository name path
         component.
         """
         e = self.assertRaises(
             InvalidRepositoryNameError,
-            Repository.validateRepositoryNameComponent, "",
+            Repository.validateNamePathComponent, "",
         )
         self.assertEqual(
             str(e), "repository name path component may not be empty"
@@ -254,19 +254,19 @@ class RepositoryTests(SynchronousTestCase):
 
 
     @given(
-        sampled_from(Repository.componentCharacters),
+        sampled_from(Repository.pathComponentCharacters),
         text(
-            alphabet=Repository.componentAlphabet,
-            min_size=(Repository.maxComponentLength - 1),
-            max_size=(Repository.maxComponentLength + 1),
+            alphabet=Repository.pathComponentAlphabet,
+            min_size=(Repository.maxPathComponentLength - 1),
+            max_size=(Repository.maxPathComponentLength + 1),
         ),
-        sampled_from(Repository.componentCharacters),
+        sampled_from(Repository.pathComponentCharacters),
     )
-    def test_validateRepositoryNameComponent_maxLength(
+    def test_validateNamePathComponent_maxLength(
         self, first: str, middle: str, last: str
     ) -> None:
         """
-        Repository.validateRepositoryNameComponent() raises
+        Repository.validateNamePathComponent() raises
         InvalidRepositoryNameError if given a repository name path component
         exceeds the allowed maximum size.
         """
@@ -274,12 +274,12 @@ class RepositoryTests(SynchronousTestCase):
 
         e = self.assertRaises(
             InvalidRepositoryNameError,
-            Repository.validateRepositoryNameComponent, component,
+            Repository.validateNamePathComponent, component,
         )
         self.assertEqual(
             str(e), (
                 f"repository name path component may not exceed "
-                f"{Repository.maxComponentLength} characters"
+                f"{Repository.maxPathComponentLength} characters"
             ),
         )
 
@@ -287,19 +287,20 @@ class RepositoryTests(SynchronousTestCase):
     @given(
         text(
             alphabet=characters(
-                blacklist_characters=Repository.componentCharacters
+                blacklist_characters=Repository.pathComponentCharacters
             ),
             min_size=1, max_size=1,
         ),
         one_of(
-            just(""), components(max_size=(Repository.maxComponentLength - 1))
+            just(""),
+            components(max_size=(Repository.maxPathComponentLength - 1)),
         ),
     )
-    def test_validateRepositoryNameComponent_leading(
+    def test_validateNamePathComponent_leading(
         self, prefix: str, suffix: str
     ) -> None:
         """
-        Repository.validateRepositoryNameComponent() raises
+        Repository.validateNamePathComponent() raises
         InvalidRepositoryNameError if given an empty repository name path
         component beginning with a character that is not a lowercase
         alphanumeric character.
@@ -309,7 +310,7 @@ class RepositoryTests(SynchronousTestCase):
 
         e = self.assertRaises(
             InvalidRepositoryNameError,
-            Repository.validateRepositoryNameComponent, component,
+            Repository.validateNamePathComponent, component,
         )
         self.assertEqual(
             str(e), (
@@ -323,27 +324,27 @@ class RepositoryTests(SynchronousTestCase):
         componentText(),
         text(
             alphabet=characters(
-                blacklist_characters=Repository.componentAlphabet
+                blacklist_characters=Repository.pathComponentAlphabet
             ),
             min_size=1,
         ),
-        sampled_from(Repository.componentCharacters),
+        sampled_from(Repository.pathComponentCharacters),
     )
-    def test_validateRepositoryNameComponent_rest(
+    def test_validateNamePathComponent_rest(
         self, prefix: str, junk: str, last: str
     ) -> None:
         """
-        Repository.validateRepositoryNameComponent() raises
+        Repository.validateNamePathComponent() raises
         InvalidRepositoryNameError if given an empty repository name path
         component containing invalid characters.
         """
         component = f"{prefix}{junk}{last}"
-        assume(len(component) < Repository.maxComponentLength)
+        assume(len(component) < Repository.maxPathComponentLength)
         note(f"Component is {component!r}")
 
         e = self.assertRaises(
             InvalidRepositoryNameError,
-            Repository.validateRepositoryNameComponent, component,
+            Repository.validateNamePathComponent, component,
         )
         self.assertEqual(
             str(e), (
@@ -354,14 +355,14 @@ class RepositoryTests(SynchronousTestCase):
 
 
     @given(
-        componentText(max_size=(Repository.maxComponentLength - 1)),
-        componentSeparators(),
+        componentText(max_size=(Repository.maxPathComponentLength - 1)),
+        pathComponentSeparators(),
     )
-    def test_validateRepositoryNameComponent_trailingSeparator(
+    def test_validateNamePathComponent_trailingSeparator(
         self, prefix: str, last: str
     ) -> None:
         """
-        Repository.validateRepositoryNameComponent() raises
+        Repository.validateNamePathComponent() raises
         InvalidRepositoryNameError if given an empty repository name path
         component ending with a character that is not a lowercase alphanumeric
         character.
@@ -371,7 +372,7 @@ class RepositoryTests(SynchronousTestCase):
 
         e = self.assertRaises(
             InvalidRepositoryNameError,
-            Repository.validateRepositoryNameComponent, component,
+            Repository.validateNamePathComponent, component,
         )
         self.assertEqual(
             str(e), (
@@ -382,44 +383,45 @@ class RepositoryTests(SynchronousTestCase):
 
 
     @given(
-        sampled_from(Repository.componentCharacters),
-        text(alphabet=Repository.componentAlphabet),
-        text(alphabet=Repository.componentSeparators, min_size=2),
-        text(alphabet=Repository.componentAlphabet),
-        sampled_from(Repository.componentCharacters),
+        sampled_from(Repository.pathComponentCharacters),
+        text(alphabet=Repository.pathComponentAlphabet),
+        text(alphabet=Repository.pathComponentSeparators, min_size=2),
+        text(alphabet=Repository.pathComponentAlphabet),
+        sampled_from(Repository.pathComponentCharacters),
     )
-    def test_validateRepositoryNameComponent_separatorRun(
+    def test_validateNamePathComponent_separatorRun(
         self, first: str, prefix: str, separators: str, suffix: str, last: str
     ) -> None:
         """
-        Repository.validateRepositoryNameComponent() raises
+        Repository.validateNamePathComponent() raises
         InvalidRepositoryNameError if given an empty repository name path
         component containing a run of more than one component separator
         character.
         """
         component = f"{first}{prefix}{separators}{suffix}{last}"
-        assume(len(component) < Repository.maxComponentLength)
+        assume(len(component) < Repository.maxPathComponentLength)
         note(f"Component is {component!r}")
 
         e = self.assertRaises(
             InvalidRepositoryNameError,
-            Repository.validateRepositoryNameComponent, component,
+            Repository.validateNamePathComponent, component,
         )
         self.assertEqual(
             str(e), (
                 f"repository name path component may not contain more than "
                 f"one component separator characters "
-                f"({Repository.componentSeparators}) in a row: {component!r}"
+                f"({Repository.pathComponentSeparators}) in a row: "
+                f"{component!r}"
             )
         )
 
 
     @given(text(min_size=1))
-    def test_validateRepositoryNameComponent_regex(
+    def test_validateNamePathComponent_regex(
         self, component: str
     ) -> None:
         """
-        Repository.validateRepositoryNameComponent() raises
+        Repository.validateNamePathComponent() raises
         InvalidRepositoryNameError if given a repository name path component
         that does not match the required regular expression.
         """
@@ -428,7 +430,7 @@ class RepositoryTests(SynchronousTestCase):
         # Conversely, the others should catch anything this catches, but the
         # simpler expression here may catch additional cases.
         try:
-            Repository.validateRepositoryNameComponent(component)
+            Repository.validateNamePathComponent(component)
         except InvalidRepositoryNameError as e:
             self.assertNotRegex(
                 component, componentRegex, (
@@ -440,57 +442,73 @@ class RepositoryTests(SynchronousTestCase):
             self.assertRegex(component, componentRegex)
 
 
-    def test_validateRepositoryName_empty(self) -> None:
+    def test_validateName_empty(self) -> None:
         """
-        Repository.validateRepositoryName() raises InvalidRepositoryNameError
-        if given an empty repository name.
+        Repository.validateName() raises InvalidRepositoryNameError if given an
+        empty repository name.
         """
         e = self.assertRaises(
-            InvalidRepositoryNameError,
-            Repository.validateRepositoryName, "",
+            InvalidRepositoryNameError, Repository.validateName, ""
         )
         self.assertEqual(str(e), "repository name may not be empty")
 
 
     @given(
-        sampled_from(Repository.componentCharacters),
+        sampled_from(Repository.pathComponentCharacters),
         text(
-            alphabet=Repository.componentAlphabet,
-            min_size=(Repository.maxRepositoryNameLength - 1),
-            max_size=(Repository.maxRepositoryNameLength + 1),
+            alphabet=Repository.pathComponentAlphabet,
+            min_size=(Repository.maxNameLength - 1),
+            max_size=(Repository.maxNameLength + 1),
         ),
-        sampled_from(Repository.componentCharacters),
+        sampled_from(Repository.pathComponentCharacters),
     )
-    def test_validateRepositoryName_maxLength(
+    def test_validateName_maxLength(
         self, first: str, middle: str, last: str
     ) -> None:
         """
-        Repository.validateRepositoryName() raises InvalidRepositoryNameError
-        if given a repository name exceeds the allowed maximum size.
+        Repository.validateName() raises InvalidRepositoryNameError if given a
+        repository name exceeds the allowed maximum size.
         """
         name = f"{first}{middle}{last}"
 
         e = self.assertRaises(
-            InvalidRepositoryNameError,
-            Repository.validateRepositoryName, name,
+            InvalidRepositoryNameError, Repository.validateName, name
         )
         self.assertEqual(
             str(e), (
-                f"repository name may not exceed "
-                f"{Repository.maxRepositoryNameLength} characters"
+                f"repository name may not exceed {Repository.maxNameLength} "
+                f"characters"
             ),
         )
 
 
     @given(text(min_size=1))
-    def test_validateRepositoryName_regex(self, name: str) -> None:
+    def test_validateName_regex(self, name: str) -> None:
         """
-        Repository.validateRepositoryName() raises InvalidRepositoryNameError
-        if given a repository name that does not match the required regular
-        expression.
+        Repository.validateName() raises InvalidRepositoryNameError if given a
+        repository name that does not match the required regular expression.
         """
         try:
-            Repository.validateRepositoryName(name)
+            Repository.validateName(name)
+        except InvalidRepositoryNameError as e:
+            self.assertNotRegex(
+                name, componentRegex, (
+                    f"{name!r} matches {repositoryNameRegex!r} but raised"
+                    f"InvalidRepositoryNameError: {e}"
+                )
+            )
+        else:
+            self.assertRegex(name, repositoryNameRegex)
+
+
+    @given(text(min_size=1))
+    def test_init_validateName_regex(self, name: str) -> None:
+        """
+        Repository() raises InvalidRepositoryNameError if given a repository
+        name that does not match the required regular expression.
+        """
+        try:
+            Repository(name=name)
         except InvalidRepositoryNameError as e:
             self.assertNotRegex(
                 name, componentRegex, (

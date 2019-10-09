@@ -48,7 +48,7 @@ class Client(object):
         repository.
         """
         url = cls.apiBaseURL
-        for component in Repository.repositoryNameComponents(name):
+        for component in Repository.namePathComponents(name):
             url = url.child(component)
         url = url.child("")
 

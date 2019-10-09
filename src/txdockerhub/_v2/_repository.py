@@ -19,9 +19,9 @@ Docker Hub API v2 Repository
 """
 
 from string import ascii_lowercase, digits
-from typing import ClassVar, List, Sequence
+from typing import Any, ClassVar, List, Sequence
 
-from attr import attrs
+from attr import Attribute, attrib, attrs
 
 
 __all__ = ()
@@ -45,19 +45,19 @@ class Repository(object):
     # Class attributes
     #
 
-    componentCharacters: ClassVar[str] = ascii_lowercase + digits
-    componentSeparators: ClassVar[str] = ".-_"
-    componentAlphabet: ClassVar[str] = (
-        componentCharacters + componentSeparators
+    pathComponentCharacters: ClassVar[str] = ascii_lowercase + digits
+    pathComponentSeparators: ClassVar[str] = ".-_"
+    pathComponentAlphabet: ClassVar[str] = (
+        pathComponentCharacters + pathComponentSeparators
     )
-    maxComponentLength: ClassVar[int] = 30
+    maxPathComponentLength: ClassVar[int] = 30
 
-    repositoryNameSeparator: ClassVar[str] = "/"
-    maxRepositoryNameLength: ClassVar[int] = 256
+    nameSeparator: ClassVar[str] = "/"
+    maxNameLength: ClassVar[int] = 256
 
 
     @classmethod
-    def repositoryNameComponents(cls, name: str) -> Sequence[str]:
+    def namePathComponents(cls, name: str) -> Sequence[str]:
         """
         Split a repository name into its path components and return a sequence
         of those components.
@@ -66,11 +66,11 @@ class Repository(object):
             raise InvalidRepositoryNameError(
                 f"repository name may not be empty"
             )
-        return name.split(cls.repositoryNameSeparator)
+        return name.split(cls.nameSeparator)
 
 
     @classmethod
-    def validateRepositoryNameComponent(cls, component: str) -> None:
+    def validateNamePathComponent(cls, component: str) -> None:
         """
         Raise InvalidRepositoryNameError if the given path component is not
         valid.
@@ -80,33 +80,33 @@ class Repository(object):
                 f"repository name path component may not be empty"
             )
 
-        if len(component) > cls.maxComponentLength:
+        if len(component) > cls.maxPathComponentLength:
             raise InvalidRepositoryNameError(
                 f"repository name path component may not exceed "
-                f"{cls.maxComponentLength} characters"
+                f"{cls.maxPathComponentLength} characters"
             )
 
-        if component[0] not in cls.componentCharacters:
+        if component[0] not in cls.pathComponentCharacters:
             raise InvalidRepositoryNameError(
                 f"repository name path component must start with a "
                 f"lowercase alphanumeric character: {component!r}"
             )
 
-        if component[-1] not in cls.componentCharacters:
+        if component[-1] not in cls.pathComponentCharacters:
             raise InvalidRepositoryNameError(
                 f"repository name path component must end with a "
                 f"lowercase alphanumeric character: {component!r}"
             )
 
-        if component[1:].strip(cls.componentAlphabet):
+        if component[1:].strip(cls.pathComponentAlphabet):
             raise InvalidRepositoryNameError(
                 f"repository name path component may only contain "
                 f"lowercase alphanumeric characters and "
-                f"{cls.componentSeparators!r}: {component!r}"
+                f"{cls.pathComponentSeparators!r}: {component!r}"
             )
 
         indexes: List[int] = []
-        for separator in cls.componentSeparators:
+        for separator in cls.pathComponentSeparators:
             indexes.extend(
                 i for i, c in enumerate(component) if c == separator
             )
@@ -118,13 +118,14 @@ class Repository(object):
                     raise InvalidRepositoryNameError(
                         f"repository name path component may not contain more "
                         f"than one component separator characters "
-                        f"({cls.componentSeparators}) in a row: {component!r}"
+                        f"({cls.pathComponentSeparators}) in a row: "
+                        f"{component!r}"
                     )
                 last = i
 
 
     @classmethod
-    def validateRepositoryName(cls, name: str) -> None:
+    def validateName(cls, name: str) -> None:
         """
         Raise InvalidRepositoryNameError if the given repository name is not
         valid.
@@ -134,13 +135,24 @@ class Repository(object):
                 f"repository name may not be empty"
             )
 
-        if len(name) > cls.maxRepositoryNameLength:
+        if len(name) > cls.maxNameLength:
             raise InvalidRepositoryNameError(
-                f"repository name may not exceed "
-                f"{cls.maxRepositoryNameLength} characters"
+                f"repository name may not exceed {cls.maxNameLength} "
+                f"characters"
             )
 
-        components = cls.repositoryNameComponents(name)
+        components = cls.namePathComponents(name)
 
         for component in components:
-            cls.validateRepositoryNameComponent(component)
+            cls.validateNamePathComponent(component)
+
+
+    #
+    # Instance attributes
+    #
+
+    name: str = attrib()
+
+    @name.validator
+    def _validateName(self, attribute: Attribute, value: Any) -> None:
+        self.validateName(value)
