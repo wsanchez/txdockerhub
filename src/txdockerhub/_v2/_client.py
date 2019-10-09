@@ -38,8 +38,9 @@ class InvalidRepositoryNameError(ValueError):
     """
 
 
+
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
-class V2Client(object):
+class Client(object):
     """
     Docker Hub API v2 Client
     """
@@ -84,7 +85,7 @@ class V2Client(object):
         if len(component) > cls.maxComponentLength:
             raise InvalidRepositoryNameError(
                 f"repository name path component may not exceed "
-                f"{V2Client.maxComponentLength} characters"
+                f"{Client.maxComponentLength} characters"
             )
 
         if component[0] not in cls.componentCharacters:
@@ -134,7 +135,7 @@ class V2Client(object):
         if len(name) > cls.maxRepositoryNameLength:
             raise InvalidRepositoryNameError(
                 f"repository name may not exceed "
-                f"{V2Client.maxRepositoryNameLength} characters"
+                f"{Client.maxRepositoryNameLength} characters"
             )
 
         components = cls.repositoryNameComponents(name)
