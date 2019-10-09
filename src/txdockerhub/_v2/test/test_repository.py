@@ -42,7 +42,7 @@ __all__ = ()
 componentRegexText = "[a-z0-9]+(?:[._-][a-z0-9]+)*"
 componentRegex = regexCompile(f"^{componentRegexText}$")
 
-repositoryNameRegexText = f"{componentRegexText}(?:{componentRegexText})*"
+repositoryNameRegexText = f"{componentRegexText}(?:/{componentRegexText})*"
 repositoryNameRegex = regexCompile(f"^{repositoryNameRegexText}$")
 
 
