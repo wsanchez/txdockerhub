@@ -19,22 +19,23 @@ Tests for L{txdockerhub._v2._digest}.
 """
 
 from string import hexdigits as lowerCaseHexdigits
-from typing import Any, Callable
+from typing import Callable
 
 from hypothesis import given
 from hypothesis.searchstrategy import SearchStrategy
-from hypothesis.strategies import characters, composite, sampled_from, text
+from hypothesis.strategies import (
+    characters, composite, integers, sampled_from, text
+)
 
 from twisted.trial.unittest import SynchronousTestCase
 
 from .._digest import Digest, DigestAlgorithm, InvalidDigestError
 
-# FIXME: Not publicly available from hypothesis
-DataStrategy = Any
-
 
 __all__ = ()
 
+
+asHex = hex
 
 #
 # Strategies
@@ -73,7 +74,10 @@ def digests(draw: Callable) -> Digest:
     """
     Strategy that generates digests.
     """
-    return Digest(algorithm=draw(algorithms()), hex=draw(hexes()))
+    return Digest(
+        algorithm=draw(algorithms()),
+        hex=draw(integers(min_value=0)),
+    )
 
 
 
@@ -131,65 +135,14 @@ class DigestTests(SynchronousTestCase):
     Tests for Digest.
     """
 
-    @given(algorithms())
-    def test_validateAlgorithm(self, algorithm: DigestAlgorithm) -> None:
-        """
-        Digest.validateAlgorithm() does not raise InvalidDigestError for
-        valid digest algorithm names.
-        """
-        try:
-            Digest.validateAlgorithm(algorithm.value)
-        except InvalidDigestError as e:  # pragma: no cover
-            self.fail(
-                f"unexpected InvalidDigestError for algorithm {algorithm!r}: "
-                f"{e}"
-            )
-
-
-    def test_validateAlgorithm_bogus(self) -> None:
-        """
-        Digest.validateAlgorithm() raises InvalidDigestError for unknown
-        algorithms.
-        """
-        algorithm = "XYZZY"
-        e = self.assertRaises(
-            InvalidDigestError, Digest.validateAlgorithm, algorithm
-        )
-        self.assertEqual(str(e), f"unknown digest algorithm: {algorithm!r}")
-
-
-    @given(hexes())
-    def test_normalizeHex(self, hexIn: str) -> None:
-        """
-        Digest.normalizeHex() lowercases the given hex data.
-        """
-        hexOut = Digest.normalizeHex(hexIn)
-        self.assertEqual(int(hexOut, 16), int(hexIn, 16))
-
-
-    @given(notHexes())
-    def test_validateHex_badCharacters(self, notHex: str) -> None:
-        """
-        Digest.validateHex() raises InvalidDigestError if non-hexadecimal
-        characters are in the given hex data.
-        """
-        e = self.assertRaises(
-            InvalidDigestError, Digest.validateHex, notHex
-        )
-        self.assertEqual(
-            str(e), f"invalid digest hexadecimal data: {notHex!r}"
-        )
-
-
-    @given(digests())
-    def test_fromText(self, digestIn: Digest) -> None:
+    @given(algorithms(), hexes())
+    def test_fromText(self, algorithm: DigestAlgorithm, hex: str) -> None:
         """
         Digest.fromText() returns a digest from a text representation.
         """
-        digestOut = Digest.fromText(
-            f"{digestIn.algorithm.name}:{digestIn.hex}"
-        )
-        self.assertEqual(digestOut, digestIn)
+        digest = Digest.fromText(f"{algorithm.name}:{hex}")
+        self.assertEqual(digest.algorithm, algorithm)
+        self.assertEqual(digest.hex, int(hex, 16))
 
 
     @given(text(alphabet=characters(blacklist_characters=":")))
@@ -202,24 +155,26 @@ class DigestTests(SynchronousTestCase):
         self.assertEqual(str(e), f"digest must include separator: {text!r}")
 
 
-    @given(text(), text(), text())
-    def test_fromText_noColonpalooza(
-        self, prefix: str, middle: str, suffix: str
+    @given(algorithms(), notHexes())
+    def test_fromText_badHex(
+        self, algorithm: DigestAlgorithm, notHex: str
     ) -> None:
         """
         Digest.fromText() raises InvalidDigestError if given a string with
-        multiple ":" characters.
+        invalid hexadecimal data.
         """
-        text = f"{prefix}:{middle}:{suffix}"
-        self.assertRaises(InvalidDigestError, Digest.fromText, text)
-        # Not checking message, since different errors could happen here.
+        text = f"{algorithm.value}:{notHex}"
+        e = self.assertRaises(InvalidDigestError, Digest.fromText, text)
+        self.assertEqual(
+            str(e), f"invalid hexadecimal data {notHex!r} in digest {text!r}"
+        )
 
 
     @given(
         text(alphabet=characters(blacklist_characters=":")).filter(
             lambda a: a not in DigestAlgorithm.__members__.values()
         ),
-        text(alphabet=characters(blacklist_characters=":")),
+        hexes(),
     )
     def test_fromText_badAlgorithm(self, algorithm: str, hex: str) -> None:
         """
@@ -234,27 +189,19 @@ class DigestTests(SynchronousTestCase):
         )
 
 
-    @given(digests())
-    def test_init(self, digestIn: Digest) -> None:
+    @given(algorithms(), integers())
+    def test_init(self, algorithm: DigestAlgorithm, hex: int) -> None:
         """
         Digest() captures the given algorithm and hex data.
         """
-        digestOut = Digest(algorithm=digestIn.algorithm, hex=digestIn.hex)
-        self.assertEqual(digestOut, digestIn)
+        digest = Digest(algorithm=algorithm, hex=hex)
+        self.assertEqual(digest.algorithm, algorithm)
+        self.assertEqual(digest.hex, hex)
 
 
-    @given(notHexes())
-    def test_init_badHex(self, hex: str) -> None:
-        """
-        Digest() raises InvalidDigestError if given an invalid hex data value.
-        """
-        self.assertRaises(InvalidDigestError, Digest, hex=hex)
-        # Not checking message, since different errors could happen here.
-
-
-    @given(digests())
-    def test_asText(self, digestIn: Digest) -> None:
-        digestOut = Digest(algorithm=digestIn.algorithm, hex=digestIn.hex)
+    @given(algorithms(), integers())
+    def test_asText(self, algorithm: DigestAlgorithm, hex: int) -> None:
+        digestOut = Digest(algorithm=algorithm, hex=hex)
         self.assertEqual(
-            digestOut.asText(), f"{digestIn.algorithm.value}:{digestIn.hex}"
+            digestOut.asText(), f"{algorithm.value}:{asHex(hex)[2:]}"
         )

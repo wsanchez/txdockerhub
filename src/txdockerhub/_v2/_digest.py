@@ -20,9 +20,9 @@ Docker Hub API v2 Digest
 
 from enum import Enum, auto, unique
 from string import hexdigits as _hexdigits
-from typing import Any, Sequence
+from typing import Sequence
 
-from attr import Attribute, attrib, attrs
+from attr import attrs
 
 
 __all__ = ()
@@ -99,13 +99,13 @@ class Digest(object):
         """
         Raise InvalidDigestError if the given hex data is not valid.
         """
-        hex = cls.normalizeHex(hex)
+        cls.normalizeHex(hex)
 
 
     @classmethod
     def fromText(cls, text: str) -> "Digest":
         try:
-            algorithmName, hex = text.split(":", 1)
+            algorithmName, hexData = text.split(":", 1)
         except ValueError:
             raise InvalidDigestError(
                 f"digest must include separator: {text!r}"
@@ -119,6 +119,14 @@ class Digest(object):
                 f"in digest {text!r}"
             )
 
+        try:
+            hex = int(hexData, 16)
+        except ValueError:
+            raise InvalidDigestError(
+                f"invalid hexadecimal data {hexData!r} "
+                f"in digest {text!r}"
+            )
+
         return Digest(algorithm=algorithm, hex=hex)
 
 
@@ -127,13 +135,8 @@ class Digest(object):
     #
 
     algorithm: DigestAlgorithm = DigestAlgorithm.sha256
-    hex: str = attrib()
-
-
-    @hex.validator
-    def _validateHex(self, attribute: Attribute, value: Any) -> None:
-        self.validateHex(self.hex)
+    hex: int
 
 
     def asText(self) -> str:
-        return f"{self.algorithm.name}:{self.hex}"
+        return f"{self.algorithm.value}:{asHex(self.hex)[2:]}"
