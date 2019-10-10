@@ -20,9 +20,9 @@ Docker Hub API v2 Digest
 
 from enum import Enum, auto, unique
 from string import hexdigits as _hexdigits
-from typing import Sequence
+from typing import Any, Sequence
 
-from attr import attrs
+from attr import Attribute, attrib, attrs
 
 
 __all__ = ()
@@ -30,6 +30,9 @@ __all__ = ()
 
 # Docker Hub produces lowercase hex digits
 hexdigits = _hexdigits.lower()
+
+
+asHex = hex
 
 
 
@@ -83,27 +86,20 @@ class Digest(object):
         """
         Return a normalized version of the given digest hex data.
         """
-        return hex.lower()
+        try:
+            return asHex(int(hex, 16))[2:]
+        except ValueError:
+            raise InvalidDigestError(
+                f"invalid digest hexadecimal data: {hex!r}"
+            )
 
 
     @classmethod
-    def validateHex(cls, hex: str, algorithm: DigestAlgorithm) -> None:
+    def validateHex(cls, hex: str) -> None:
         """
         Raise InvalidDigestError if the given hex data is not valid.
         """
-        if cls.normalizeHex(hex).strip(hexdigits):
-            raise InvalidDigestError(
-                f"digest hex data may only contain hexadecimal numbers: "
-                f"{hex!r}"
-            )
-
-        if algorithm is DigestAlgorithm.sha256:
-            if len(hex) != 64:
-                raise InvalidDigestError(
-                    f"SHA-256 digest hex data must contain 64 digits: {hex!r}"
-                )
-        else:
-            raise TypeError(f"unknown digest algorithm: {algorithm!r}")
+        hex = cls.normalizeHex(hex)
 
 
     @classmethod
@@ -131,11 +127,12 @@ class Digest(object):
     #
 
     algorithm: DigestAlgorithm = DigestAlgorithm.sha256
-    hex: str
+    hex: str = attrib()
 
 
-    def __attrs_post_init__(self) -> None:
-        self.validateHex(self.hex, self.algorithm)
+    @hex.validator
+    def _validateHex(self, attribute: Attribute, value: Any) -> None:
+        self.validateHex(self.hex)
 
 
     def asText(self) -> str:

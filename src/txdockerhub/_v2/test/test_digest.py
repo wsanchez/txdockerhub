@@ -23,9 +23,7 @@ from typing import Any, Callable
 
 from hypothesis import given
 from hypothesis.searchstrategy import SearchStrategy
-from hypothesis.strategies import (
-    characters, composite, data, sampled_from, text
-)
+from hypothesis.strategies import characters, composite, sampled_from, text
 
 from twisted.trial.unittest import SynchronousTestCase
 
@@ -54,20 +52,20 @@ def algorithms() -> SearchStrategy:  # DigestAlgorithm
     return sampled_from(DigestAlgorithm)
 
 
-def hexes(
-    algorithm: DigestAlgorithm, lowerCase: bool = False
-) -> SearchStrategy:  # str
+def hexes() -> SearchStrategy:  # str
     """
     Strategy that generates digest hex data.
     """
-    assert algorithm is DigestAlgorithm.sha256
+    return text(min_size=1, alphabet=mixedCaseHexdigits)
 
-    if lowerCase:
-        alphabet = lowerCaseHexdigits
-    else:
-        alphabet = mixedCaseHexdigits
 
-    return text(alphabet=alphabet, min_size=64, max_size=64)
+def notHexes() -> SearchStrategy:  # str
+    """
+    Strategy that generates digest non-hex data.
+    """
+    return text(min_size=1).filter(
+        lambda s: not any((c in mixedCaseHexdigits) for c in s)
+    )
 
 
 @composite
@@ -75,10 +73,7 @@ def digests(draw: Callable) -> Digest:
     """
     Strategy that generates digests.
     """
-    algorithm = draw(algorithms())
-    hex = draw(hexes(algorithm))
-
-    return Digest(algorithm=algorithm, hex=hex)
+    return Digest(algorithm=draw(algorithms()), hex=draw(hexes()))
 
 
 
@@ -95,34 +90,27 @@ class StrategyTests(SynchronousTestCase):
         self.assertIn(algorithm, DigestAlgorithm)
 
 
-    @given(data())
-    def test_hexes(self, data: DataStrategy) -> None:
+    @given(hexes())
+    def test_hexes(self, hex: str) -> None:
         """
         Generated hex data are valid.
         """
-        algorithm = data.draw(algorithms())
-        hex = data.draw(hexes(algorithm=algorithm))
-
         try:
-            Digest.validateHex(hex, algorithm)
-        except InvalidDigestError as e:  # pragma: no cover
+            int(hex, 16)
+        except ValueError as e:  # pragma: no cover
             self.fail(
-                f"invalid hex data {hex!r} for algorithm {algorithm}: {e}"
+                f"invalid hex data {hex!r}: {e}"
             )
 
 
-    @given(data())
-    def test_hexes_lower(self, data: DataStrategy) -> None:
+    @given(notHexes())
+    def test_notHexes(self, notHex: str) -> None:
         """
-        Generated hex data are lowercase if so specified.
+        Generated non-hex data are not hex data.
         """
-        algorithm = data.draw(algorithms())
-        hex = data.draw(hexes(algorithm=algorithm, lowerCase=True))
-
-        if hex.strip(lowerCaseHexdigits):  # pragma: no cover
-            self.fail(
-                f"hex data is not using lower case alphabet: {hex!r}"
-            )
+        self.assertRaises(
+            ValueError, int, notHex, 16
+        )
 
 
     @given(digests())
@@ -170,69 +158,27 @@ class DigestTests(SynchronousTestCase):
         self.assertEqual(str(e), f"unknown digest algorithm: {algorithm!r}")
 
 
-    @given(digests())
-    def test_normalizeHex(self, digest: Digest) -> None:
+    @given(hexes())
+    def test_normalizeHex(self, hexIn: str) -> None:
         """
         Digest.normalizeHex() lowercases the given hex data.
         """
-        hex = digest.hex
-        self.assertEqual(Digest.normalizeHex(hex), hex.lower())
+        hexOut = Digest.normalizeHex(hexIn)
+        self.assertEqual(int(hexOut, 16), int(hexIn, 16))
 
 
-    @given(
-        text(min_size=1).filter(lambda hex: hex.strip(mixedCaseHexdigits)),
-        algorithms(),
-    )
-    def test_validateHex_badCharacters(
-        self, hex: str, algorithm: DigestAlgorithm
-    ) -> None:
+    @given(notHexes())
+    def test_validateHex_badCharacters(self, notHex: str) -> None:
         """
         Digest.validateHex() raises InvalidDigestError if non-hexadecimal
         characters are in the given hex data.
         """
         e = self.assertRaises(
-            InvalidDigestError, Digest.validateHex, hex, algorithm
+            InvalidDigestError, Digest.validateHex, notHex
         )
         self.assertEqual(
-            str(e), (
-                f"digest hex data may only contain hexadecimal numbers: "
-                f"{hex!r}"
-            ),
+            str(e), f"invalid digest hexadecimal data: {notHex!r}"
         )
-
-
-    @given(
-        text(alphabet=mixedCaseHexdigits, min_size=1).filter(
-            lambda hex: len(hex) != 64
-        ),
-        algorithms(),
-    )
-    def test_validateHex_badLength(
-        self, hex: str, algorithm: DigestAlgorithm
-    ) -> None:
-        """
-        Digest.validateHex() raises InvalidDigestError if non-hexadecimal
-        characters are in the given hex data.
-        """
-        e = self.assertRaises(
-            InvalidDigestError, Digest.validateHex, hex, algorithm
-        )
-        self.assertEqual(
-            str(e),
-            f"SHA-256 digest hex data must contain 64 digits: {hex!r}",
-        )
-
-
-    def test_validateHex_badAlgorithmType(self) -> None:
-        """
-        Digest.validateHex() raises TypeError when given an algorithm that is
-        not a DigestAlgorithm.
-        """
-        algorithm = "XYZZY"
-        e = self.assertRaises(
-            TypeError, Digest.validateHex, "0" * 64, algorithm
-        )
-        self.assertEqual(str(e), f"unknown digest algorithm: {algorithm!r}")
 
 
     @given(digests())
@@ -297,9 +243,7 @@ class DigestTests(SynchronousTestCase):
         self.assertEqual(digestOut, digestIn)
 
 
-    @given(
-        text(min_size=1).filter(lambda hex: hex.strip(mixedCaseHexdigits)),
-    )
+    @given(notHexes())
     def test_init_badHex(self, hex: str) -> None:
         """
         Digest() raises InvalidDigestError if given an invalid hex data value.
