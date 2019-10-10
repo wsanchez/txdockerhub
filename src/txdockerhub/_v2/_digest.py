@@ -46,6 +46,8 @@ class AutoName(Enum):
 class DigestAlgorithm(AutoName):
     """
     Digest Algorithm.
+
+    Enumerated values are used in digest string representations.
     """
 
     sha256 = auto()
@@ -100,9 +102,8 @@ class Digest(object):
                 raise InvalidDigestError(
                     f"SHA-256 digest hex data must contain 64 digits: {hex!r}"
                 )
-
         else:
-            raise AssertionError(f"unknown digest algorithm: {algorithm!r}")
+            raise TypeError(f"unknown digest algorithm: {algorithm!r}")
 
 
     @classmethod
@@ -129,11 +130,11 @@ class Digest(object):
     # Instance attributes
     #
 
-    algorithm: DigestAlgorithm
+    algorithm: DigestAlgorithm = DigestAlgorithm.sha256
     hex: str
 
 
-    def __attr_post_init__(self) -> None:
+    def __attrs_post_init__(self) -> None:
         self.validateHex(self.hex, self.algorithm)
 
 

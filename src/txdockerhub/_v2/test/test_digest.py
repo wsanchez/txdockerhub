@@ -223,13 +223,14 @@ class DigestTests(SynchronousTestCase):
         )
 
 
-    def test_validateHex_bogus(self) -> None:
+    def test_validateHex_badAlgorithmType(self) -> None:
         """
-        Digest.validateHex() raises AssertionError for unknown algorithms.
+        Digest.validateHex() raises TypeError when given an algorithm that is
+        not a DigestAlgorithm.
         """
         algorithm = "XYZZY"
         e = self.assertRaises(
-            AssertionError, Digest.validateHex, "0" * 64, algorithm
+            TypeError, Digest.validateHex, "0" * 64, algorithm
         )
         self.assertEqual(str(e), f"unknown digest algorithm: {algorithm!r}")
 
@@ -277,11 +278,39 @@ class DigestTests(SynchronousTestCase):
     def test_fromText_badAlgorithm(self, algorithm: str, hex: str) -> None:
         """
         Digest.fromText() raises InvalidDigestError if given a string with an
-        unknown algorithm
+        unknown algorithm.
         """
         text = f"{algorithm}:{hex}"
         e = self.assertRaises(InvalidDigestError, Digest.fromText, text)
         self.assertEqual(
             str(e),
             f"unknown digest algorithm {algorithm!r} in digest {text!r}",
+        )
+
+
+    @given(digests())
+    def test_init(self, digestIn: Digest) -> None:
+        """
+        Digest() captures the given algorithm and hex data.
+        """
+        digestOut = Digest(algorithm=digestIn.algorithm, hex=digestIn.hex)
+        self.assertEqual(digestOut, digestIn)
+
+
+    @given(
+        text(min_size=1).filter(lambda hex: hex.strip(mixedCaseHexdigits)),
+    )
+    def test_init_badHex(self, hex: str) -> None:
+        """
+        Digest() raises InvalidDigestError if given an invalid hex data value.
+        """
+        self.assertRaises(InvalidDigestError, Digest, hex=hex)
+        # Not checking message, since different errors could happen here.
+
+
+    @given(digests())
+    def test_asText(self, digestIn: Digest) -> None:
+        digestOut = Digest(algorithm=digestIn.algorithm, hex=digestIn.hex)
+        self.assertEqual(
+            digestOut.asText(), f"{digestIn.algorithm.value}:{digestIn.hex}"
         )
