@@ -71,38 +71,6 @@ class Digest(object):
     """
 
     @classmethod
-    def validateAlgorithm(cls, algorithm: str) -> None:
-        """
-        Raise InvalidDigestError if the given algorithm is not valid.
-        """
-        if algorithm not in DigestAlgorithm.__members__:
-            raise InvalidDigestError(
-                f"unknown digest algorithm: {algorithm!r}"
-            )
-
-
-    @classmethod
-    def normalizeHex(cls, hex: str) -> str:
-        """
-        Return a normalized version of the given digest hex data.
-        """
-        try:
-            return asHex(int(hex, 16))[2:]
-        except ValueError:
-            raise InvalidDigestError(
-                f"invalid digest hexadecimal data: {hex!r}"
-            )
-
-
-    @classmethod
-    def validateHex(cls, hex: str) -> None:
-        """
-        Raise InvalidDigestError if the given hex data is not valid.
-        """
-        cls.normalizeHex(hex)
-
-
-    @classmethod
     def fromText(cls, text: str) -> "Digest":
         try:
             algorithmName, hexData = text.split(":", 1)
