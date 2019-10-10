@@ -15,7 +15,7 @@
 ##
 
 """
-Tests for L{txdockerhub._v2._digest}.
+Tests for L{txdockerhub.v2._digest}.
 """
 
 from string import hexdigits as lowerCaseHexdigits

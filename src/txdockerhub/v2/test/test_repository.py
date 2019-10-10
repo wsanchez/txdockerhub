@@ -15,7 +15,7 @@
 ##
 
 """
-Tests for L{txdockerhub._v2._repository}.
+Tests for L{txdockerhub.v2._repository}.
 """
 
 from re import compile as regexCompile

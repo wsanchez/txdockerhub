@@ -15,7 +15,7 @@
 ##
 
 """
-Tests for L{txdockerhub._v2._client}.
+Tests for L{txdockerhub.v2._client}.
 """
 
 from hypothesis import given
