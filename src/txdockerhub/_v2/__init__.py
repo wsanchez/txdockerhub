@@ -21,14 +21,18 @@ See: https://docs.docker.com/registry/spec/api/
 """
 
 from ._client import Client
+from ._digest import Digest, DigestAlgorithm, InvalidDigestError
 from ._error import Error, ErrorCode
 from ._repository import InvalidRepositoryNameError, Repository
 
 
 __all__ = (
     "Client",
+    "Digest",
+    "DigestAlgorithm",
     "Error",
     "ErrorCode",
+    "InvalidDigestError",
     "InvalidRepositoryNameError",
     "Repository",
 )
