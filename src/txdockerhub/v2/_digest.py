@@ -19,7 +19,7 @@ Docker Hub API v2 Digest
 """
 
 from enum import Enum, auto, unique
-from string import hexdigits as _hexdigits
+from string import hexdigits as upperCaseHexDigits
 from typing import Sequence
 
 from attr import attrs
@@ -29,7 +29,10 @@ __all__ = ()
 
 
 # Docker Hub produces lowercase hex digits
-hexdigits = _hexdigits.lower()
+lowerCaseHexDigits = upperCaseHexDigits.lower()
+hexDigits = "".join(
+    frozenset(lowerCaseHexDigits + upperCaseHexDigits)
+)
 
 
 asHex = hex
@@ -70,6 +73,10 @@ class Digest(object):
     Docker Hub API v2 Digest
     """
 
+    #
+    # Class attributes
+    #
+
     @classmethod
     def fromText(cls, text: str) -> "Digest":
         try:
@@ -87,13 +94,13 @@ class Digest(object):
                 f"in digest {text!r}"
             )
 
-        try:
-            hex = int(hexData, 16)
-        except ValueError:
+        if any((digit not in hexDigits) for digit in hexData):
             raise InvalidDigestError(
                 f"invalid hexadecimal data {hexData!r} "
                 f"in digest {text!r}"
             )
+
+        hex = int(hexData, 16)
 
         return Digest(algorithm=algorithm, hex=hex)
 

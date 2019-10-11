@@ -18,7 +18,6 @@
 Tests for L{txdockerhub.v2._digest}.
 """
 
-from string import hexdigits as lowerCaseHexdigits
 from typing import Callable
 
 from hypothesis import given
@@ -29,7 +28,7 @@ from hypothesis.strategies import (
 
 from twisted.trial.unittest import SynchronousTestCase
 
-from .._digest import Digest, DigestAlgorithm, InvalidDigestError
+from .._digest import Digest, DigestAlgorithm, InvalidDigestError, hexDigits
 
 
 __all__ = ()
@@ -40,11 +39,6 @@ asHex = hex
 #
 # Strategies
 #
-
-mixedCaseHexdigits = "".join(
-    frozenset(lowerCaseHexdigits + lowerCaseHexdigits.upper())
-)
-
 
 def algorithms() -> SearchStrategy:  # DigestAlgorithm
     """
@@ -57,7 +51,7 @@ def hexes() -> SearchStrategy:  # str
     """
     Strategy that generates digest hex data.
     """
-    return text(min_size=1, alphabet=mixedCaseHexdigits)
+    return text(min_size=1, alphabet=hexDigits)
 
 
 def notHexes() -> SearchStrategy:  # str
@@ -65,7 +59,7 @@ def notHexes() -> SearchStrategy:  # str
     Strategy that generates digest non-hex data.
     """
     return text(min_size=1).filter(
-        lambda s: not any((c in mixedCaseHexdigits) for c in s)
+        lambda s: not any((c in hexDigits) for c in s)
     )
 
 
