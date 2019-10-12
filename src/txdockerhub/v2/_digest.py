@@ -39,7 +39,7 @@ asHex = hex
 
 
 
-class AutoName(Enum):
+class AutoName(str, Enum):
     @staticmethod
     def _generate_next_value_(
         name: str, start: int, count: int, last_values: Sequence[str]

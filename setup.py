@@ -111,6 +111,8 @@ install_requirements = [
     # Direct dependencies
     "attrs",
     "hyperlink",
+    "pyOpenSSL",
+    "treq",
     "Twisted",
 ]
 

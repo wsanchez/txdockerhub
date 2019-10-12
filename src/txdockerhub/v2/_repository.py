@@ -19,7 +19,7 @@ Docker Hub API v2 Repository
 """
 
 from string import ascii_lowercase, digits
-from typing import Any, ClassVar, List, Sequence
+from typing import ClassVar, List, Sequence
 
 from attr import Attribute, attrib, attrs
 
@@ -154,5 +154,5 @@ class Repository(object):
     name: str = attrib()
 
     @name.validator
-    def _validateName(self, attribute: Attribute, value: Any) -> None:
+    def _validateName(self, attribute: Attribute, value: str) -> None:
         self.validateName(value)

@@ -20,9 +20,11 @@ Docker Hub API v2 Client
 
 from typing import ClassVar
 
-from attr import attrs
+from attr import Attribute, attrib, attrs
 
-from hyperlink import DecodedURL
+from hyperlink import URL
+
+from treq import get
 
 from ._repository import Repository
 
@@ -32,24 +34,69 @@ __all__ = ()
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
+class Endpoint(object):
+    apiVersion: str
+    root: URL = attrib()
+
+
+    @root.validator
+    def _validateRoot(self, attribute: Attribute, value: URL) -> None:
+        if value.path and value.path[-1]:
+            raise ValueError(f"""Root URL must end in "/": {value!r}""")
+
+
+    @property
+    def api(self) -> URL:
+        return self.root.click(f"v{self.apiVersion}/")
+
+
+    def repository(self, repository: Repository) -> URL:
+        url = self.api
+        for component in repository.namePathComponents(repository.name):
+            url = url.child(component)
+        url = url.child("")
+
+        return url
+
+
+
+@attrs(frozen=True, auto_attribs=True, kw_only=True)
 class Client(object):
     """
     Docker Hub API v2 Client
     """
 
+    #
+    # Class attributes
+    #
+
     apiVersion: ClassVar[str] = "2"
-    apiBaseURL: ClassVar[DecodedURL] = DecodedURL.fromText(f"/v{apiVersion}/")
+
+    defaultRootURL = URL.fromText("https://hub.docker.com/")
 
 
-    @classmethod
-    def repositoryBaseURL(cls, name: str) -> DecodedURL:
+    #
+    # Instance attributes
+    #
+
+    rootURL: URL = attrib(default=defaultRootURL)
+
+    _endpoint: Endpoint = attrib(init=False)
+
+
+    def __attrs_post_init__(self) -> None:
+        object.__setattr__(
+            self, "_endpoint",
+            Endpoint(apiVersion=self.apiVersion, root=self.rootURL),
+        )
+
+
+    async def ping(self) -> bool:
         """
-        Build and return the base URL for endpoints that operate on a given
-        repository.
+        Check whether the registry host supports the API version in use by
+        the client.
         """
-        url = cls.apiBaseURL
-        for component in Repository.namePathComponents(name):
-            url = url.child(component)
-        url = url.child("")
-
-        return url
+        # breakpoint()
+        respose = await get(self._endpoint.api.asText())
+        respose
+        return True

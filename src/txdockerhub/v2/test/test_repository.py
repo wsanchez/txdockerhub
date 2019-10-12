@@ -136,6 +136,11 @@ def repositoryNames(
     return name
 
 
+@composite
+def repositories(draw: Callable) -> Repository:
+    return Repository(name=draw(repositoryNames()))
+
+
 
 class StrategyTests(SynchronousTestCase):
     """
@@ -189,6 +194,14 @@ class StrategyTests(SynchronousTestCase):
                     f"invalid path component {component!r} "
                     f"in repository name {name!r}: {e}"
                 )
+
+
+    @given(repositories())
+    def test_repositories(self, repository: Repository) -> None:
+        """
+        Generated repositories are valid.
+        """
+        self.assertIsInstance(repository, Repository)
 
 
 
