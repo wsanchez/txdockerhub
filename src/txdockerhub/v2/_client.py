@@ -72,7 +72,7 @@ class Client(object):
 
     apiVersion: ClassVar[str] = "2"
 
-    defaultRootURL = URL.fromText("https://hub.docker.com/")
+    defaultRootURL = URL.fromText("https://registry.hub.docker.com/")
 
 
     #
