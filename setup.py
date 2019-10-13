@@ -112,6 +112,7 @@ install_requirements = [
     "attrs",
     "hyperlink",
     "pyOpenSSL",
+    "service-identity",
     "treq",
     "Twisted",
 ]
