@@ -18,18 +18,31 @@
 Docker Hub API v2 Client
 """
 
-from typing import ClassVar
+from sys import stdout
+from typing import Any, Callable, ClassVar
 
 from attr import Attribute, attrib, attrs
+
+from click import (
+    group as commandGroup,
+    option as commandOption, version_option as versionOption,
+)
 
 from hyperlink import URL
 
 from treq import get
 
+from twisted.application.runner._runner import Runner
+from twisted.internet.defer import ensureDeferred
+from twisted.logger import Logger
+
 from ._repository import Repository
 
 
 __all__ = ()
+
+
+dockerHubRegistryURL = "https://registry.hub.docker.com/"
 
 
 
@@ -70,9 +83,18 @@ class Client(object):
     # Class attributes
     #
 
+    log: ClassVar[Logger] = Logger()
+
     apiVersion: ClassVar[str] = "2"
 
-    defaultRootURL = URL.fromText("https://registry.hub.docker.com/")
+    defaultRootURL = URL.fromText(dockerHubRegistryURL)
+
+    @classmethod
+    def main(cls) -> None:
+        """
+        Command line entry point.
+        """
+        main()
 
 
     #
@@ -96,7 +118,56 @@ class Client(object):
         Check whether the registry host supports the API version in use by
         the client.
         """
-        # breakpoint()
-        respose = await get(self._endpoint.api.asText())
-        respose
+        url = self._endpoint.api.asText()
+        respose = await get(url)
+        print(respose)
         return True
+
+
+
+#
+# Command line
+#
+
+def run(f: Callable, **kwargs: Any) -> None:
+    """
+    Run the application service.
+    """
+    from twisted.internet import reactor
+
+    def whenRunning(**kwargs: Any) -> None:
+        d = ensureDeferred(f(**kwargs))
+        d.addCallback(lambda _: reactor.stop())
+
+    runner = Runner(
+        reactor=reactor,
+        logFile=stdout,
+        whenRunning=whenRunning,
+        whenRunningArguments=kwargs,
+    )
+    runner.run()
+
+
+@commandGroup()
+@versionOption()
+def main() -> None:
+    """
+    Docker Hub client.
+    """
+
+
+@main.command()
+@commandOption(
+    "--root", show_default=True, show_envvar=True,
+    help="URL for the repository API base endpoint",
+)
+def ping(root: str = dockerHubRegistryURL) -> None:
+    """
+    Check Docker Hub service for availability and compatibility.
+    """
+    client = Client()
+    run(client.ping)
+
+
+if __name__ == "__main__":
+    main()

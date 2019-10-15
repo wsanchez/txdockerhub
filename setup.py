@@ -81,7 +81,7 @@ entry_points = {
 }
 
 script_entry_points = {
-    # "cmd": ("txdockerhub.module", "Class.main"),
+    "client": ("txdockerhub.v2", "Client.main"),
 }
 
 for tool, (module, function) in script_entry_points.items():
@@ -110,6 +110,7 @@ setup_requirements = []
 install_requirements = [
     # Direct dependencies
     "attrs",
+    "click",
     "hyperlink",
     "pyOpenSSL",
     "service-identity",
