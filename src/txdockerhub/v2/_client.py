@@ -48,6 +48,10 @@ dockerHubRegistryURL = "https://registry.hub.docker.com/"
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
 class Endpoint(object):
+    """
+    API Endpoint URL.
+    """
+
     apiVersion: str
     root: URL = attrib()
 
@@ -118,9 +122,8 @@ class Client(object):
         Check whether the registry host supports the API version in use by
         the client.
         """
-        url = self._endpoint.api.asText()
-        respose = await get(url)
-        print(respose)
+        await self.get(self._endpoint.api)
+
         return True
 
 
@@ -129,15 +132,29 @@ class Client(object):
 # Command line
 #
 
-def run(f: Callable, **kwargs: Any) -> None:
+def run(methodName: str, **kwargs: Any) -> None:
     """
     Run the application service.
     """
     from twisted.internet import reactor
 
+    client = Client()
+    method = getattr(client, methodName)
+
     def whenRunning(**kwargs: Any) -> None:
-        d = ensureDeferred(f(**kwargs))
-        d.addCallback(lambda _: reactor.stop())
+        def success(value: Any) -> None:
+            reactor.stop()
+
+        def error(failure: Failure) -> None:
+            client.log.failure(
+                "While running {methodName}({args()})",
+                failure=failure, methodName=methodName,
+                args=lambda: ", ".join(f"{k}={v!r}" for k, v in kwargs.items())
+            )
+            reactor.stop()
+
+        d = ensureDeferred(method(**kwargs))
+        d.addCallbacks(success, error)
 
     runner = Runner(
         reactor=reactor,
@@ -165,8 +182,7 @@ def ping(root: str = dockerHubRegistryURL) -> None:
     """
     Check Docker Hub service for availability and compatibility.
     """
-    client = Client()
-    run(client.ping)
+    run("ping")
 
 
 if __name__ == "__main__":
