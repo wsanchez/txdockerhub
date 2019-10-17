@@ -96,6 +96,18 @@ def urls(draw: Callable, collection: bool = False) -> str:
     return url
 
 
+@composite
+def endpoints(draw: Callable) -> Endpoint:
+    """
+    Strategy that generates Endpoints.
+    """
+    return Endpoint(
+        apiVersion=draw(versions()),
+        auth=draw(urls(collection=True)),
+        root=draw(urls(collection=True)),
+    )
+
+
 
 class StrategyTests(SynchronousTestCase):
     """
@@ -135,27 +147,26 @@ class EndpointTests(SynchronousTestCase):
     Tests for Endpoint.
     """
 
-    @given(versions(), urls(collection=True))
-    def test_api(self, version: str, root: URL) -> None:
+    @given(endpoints())
+    def test_api(self, endpoint: Endpoint) -> None:
         """
         Endpoint.api equals the API version URL.
         """
         self.assertEqual(
-            Endpoint(apiVersion=version, root=root).api,
-            root.click(f"v{version}/"),
+            endpoint.api, endpoint.root.click(f"v{endpoint.apiVersion}/")
         )
 
 
-    @given(versions(), urls(collection=True), repositories())
+    @given(endpoints(), repositories())
     def test_repository(
-        self, version: str, root: URL, repository: Repository
+        self, endpoint: Endpoint, repository: Repository
     ) -> None:
         """
         Endpoint.repository() returns the URL for the given repository name.
         """
         self.assertEqual(
-            Endpoint(apiVersion=version, root=root).repository(repository),
-            root.click(f"v{version}/{repository.name}/")
+            endpoint.repository(repository),
+            endpoint.root.click(f"v{endpoint.apiVersion}/{repository.name}/")
         )
 
 
