@@ -47,8 +47,7 @@ from ._repository import Repository
 __all__ = ()
 
 
-dockerHubAuthURL = "https://auth.docker.io/"
-dockerHubRegistryURL = "https://registry.hub.docker.com/"
+dockerHubRegistryURL = "https://registry-1.docker.io/"
 
 
 
@@ -69,25 +68,13 @@ class Endpoint(object):
     """
 
     apiVersion: str
-    auth: URL = attrib()
     root: URL = attrib()
-
-
-    @auth.validator
-    def _validateAuth(self, attribute: Attribute, value: URL) -> None:
-        if value.path and value.path[-1]:
-            raise ValueError(f"""Auth URL must end in "/": {value!r}""")
 
 
     @root.validator
     def _validateRoot(self, attribute: Attribute, value: URL) -> None:
         if value.path and value.path[-1]:
             raise ValueError(f"""Root URL must end in "/": {value!r}""")
-
-
-    @property
-    def token(self) -> URL:
-        return self.auth.click("token")
 
 
     @property
@@ -106,12 +93,12 @@ class Endpoint(object):
 
 
 @attrs(frozen=False, auto_attribs=True, kw_only=True, cmp=False)
-class _Oauth(object):
+class _OAuth(object):
     """
     Internal mutable state for Client.
     """
 
-    realm:   Optional[str] = None
+    realm:   Optional[URL] = None
     service: Optional[str] = None
     token:   Optional[str] = None
 
@@ -131,7 +118,6 @@ class Client(object):
 
     apiVersion: ClassVar[str] = "2"
 
-    defaultAuthURL = URL.fromText(dockerHubAuthURL)
     defaultRootURL = URL.fromText(dockerHubRegistryURL)
 
 
@@ -147,20 +133,16 @@ class Client(object):
     # Instance attributes
     #
 
-    authURL: URL = attrib(default=defaultAuthURL)
     rootURL: URL = attrib(default=defaultRootURL)
 
     _endpoint: Endpoint = attrib(init=False)
-    _oauth: _Oauth = attrib(factory=_Oauth, init=False)
+    _oAuth: _OAuth = attrib(factory=_OAuth, init=False)
 
 
     def __attrs_post_init__(self) -> None:
         object.__setattr__(
             self, "_endpoint",
-            Endpoint(
-                apiVersion=self.apiVersion,
-                auth=self.authURL, root=self.rootURL,
-            )
+            Endpoint(apiVersion=self.apiVersion, root=self.rootURL)
         )
 
 
@@ -170,9 +152,9 @@ class Client(object):
         """
         async def get() -> IResponse:
             headers = Headers({})
-            if self._oauth.token:
+            if self._oAuth.token:
                 headers.setRawHeaders(
-                    "Authorization", [f"Bearer {self._oauth.token}"]
+                    "Authorization", [f"Bearer {self._oAuth.token}"]
                 )
 
             self.log.info(
@@ -212,19 +194,22 @@ class Client(object):
 
         if challengeValue.startswith("Bearer "):
             challengeParams = {
-                k: v for k, v in
+                k: v[1:-1] if v.startswith('"') and v.endswith('"') else v
+                for k, v in
                 (token.split("=") for token in challengeValue[7:].split(","))
             }
 
             try:
-                self._oauth.realm = challengeParams["realm"]
+                realm = challengeParams["realm"]
             except KeyError:
                 raise ProtocolError(
                     "got WWW-Authenticate header with no realm"
                 )
 
+            self._oAuth.realm = URL.fromText(realm)
+
             try:
-                self._oauth.service = challengeParams["service"]
+                self._oAuth.service = challengeParams["service"]
             except KeyError:
                 raise ProtocolError(
                     "got WWW-Authenticate header with no service"
@@ -246,10 +231,10 @@ class Client(object):
         """
         Obtain an authorization token from the registry.
         """
-        assert self._oauth.service
+        assert self._oAuth.realm
+        assert self._oAuth.service
 
-        url = self._endpoint.token
-        url = url.set("service", self._oauth.service)
+        url = self._oAuth.realm.set("service", self._oAuth.service)
 
         self.log.info("Authenticating at {url}...", url=url)
 
@@ -257,7 +242,7 @@ class Client(object):
         json = await jsonContentFromResponse(response)
 
         try:
-            self._oauth.token = json["token"]
+            self._oAuth.token = json["token"]
         except KeyError:
             raise ProtocolError("got auth response with no token")
 

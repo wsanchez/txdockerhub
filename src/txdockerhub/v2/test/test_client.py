@@ -102,9 +102,7 @@ def endpoints(draw: Callable) -> Endpoint:
     Strategy that generates Endpoints.
     """
     return Endpoint(
-        apiVersion=draw(versions()),
-        auth=draw(urls(collection=True)),
-        root=draw(urls(collection=True)),
+        apiVersion=draw(versions()), root=draw(urls(collection=True))
     )
 
 
