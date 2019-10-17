@@ -63,10 +63,14 @@ class Error(object):
     @classmethod
     def fromJSON(cls, json: Dict[str, Any]) -> "Error":
         codeName = json.get("code", "UNKNOWN")
-        message = json.get("message", "")
-        detail = json.get("detail", None)
 
-        code = ErrorCode[codeName]
+        try:
+            code = ErrorCode[codeName]
+        except KeyError:
+            code = ErrorCode.UNKNOWN
+
+        message = json.get("message", code.value)
+        detail = json.get("detail", None)
 
         return Error(code=code, message=message, detail=detail)
 
