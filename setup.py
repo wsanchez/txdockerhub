@@ -81,11 +81,11 @@ entry_points = {
 }
 
 script_entry_points = {
-    "client": ("txdockerhub.v2", "Client.main"),
+    "txdockerhub": ("txdockerhub.v2", "Client.main"),
 }
 
 for tool, (module, function) in script_entry_points.items():
-    entry_points["console_scripts"].append(f"dockerhub_{tool} = {module}:{function}")
+    entry_points["console_scripts"].append(f"{tool} = {module}:{function}")
 
 
 #
