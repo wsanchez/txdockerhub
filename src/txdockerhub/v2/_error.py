@@ -18,8 +18,8 @@
 Docker Hub API v2 Error
 """
 
-from enum import Enum, auto, unique
-from typing import Any, Sequence
+from enum import Enum, unique
+from typing import Any, Dict
 
 from attr import attrs
 
@@ -28,36 +28,29 @@ __all__ = ()
 
 
 
-class AutoName(Enum):
-    @staticmethod
-    def _generate_next_value_(
-        name: str, start: int, count: int, last_values: Sequence[str]
-    ) -> str:
-        return name
-
-
-
 @unique
-class ErrorCode(AutoName):
+class ErrorCode(Enum):
     """
     Error Code.
     """
 
-    BLOB_UNKNOWN          = auto()
-    BLOB_UPLOAD_INVALID   = auto()
-    BLOB_UPLOAD_UNKNOWN   = auto()
-    DIGEST_INVALID        = auto()
-    MANIFEST_BLOB_UNKNOWN = auto()
-    MANIFEST_INVALID      = auto()
-    MANIFEST_UNKNOWN      = auto()
-    MANIFEST_UNVERIFIED   = auto()
-    NAME_INVALID          = auto()
-    NAME_UNKNOWN          = auto()
-    SIZE_INVALID          = auto()
-    TAG_INVALID           = auto()
-    UNAUTHORIZED          = auto()
-    DENIED                = auto()
-    UNSUPPORTED           = auto()
+    UNKNOWN = "unknown error"
+
+    BLOB_UNKNOWN          = "blob unknown to registry"
+    BLOB_UPLOAD_INVALID   = "blob upload invalid"
+    BLOB_UPLOAD_UNKNOWN   = "blob upload unknown to registry"
+    DIGEST_INVALID        = "provided digest did not match uploaded content"
+    MANIFEST_BLOB_UNKNOWN = "manifest blob unknown to registry"
+    MANIFEST_INVALID      = "manifest invalid"
+    MANIFEST_UNKNOWN      = "manifest unknown"
+    MANIFEST_UNVERIFIED   = "manifest failed signature verification"
+    NAME_INVALID          = "invalid repository name"
+    NAME_UNKNOWN          = "repository name not known to registry"
+    SIZE_INVALID          = "provided length did not match content length"
+    TAG_INVALID           = "manifest tag did not match URI"
+    UNAUTHORIZED          = "authentication required"
+    DENIED                = "requested access to the resource is denied"
+    UNSUPPORTED           = "operation is unsupported"
 
 
 
