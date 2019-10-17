@@ -34,5 +34,7 @@ __all__ = (
     "ErrorCode",
     "InvalidDigestError",
     "InvalidRepositoryNameError",
+    "ProtocolError",
+    "ProtocolNotSupportedError",
     "Repository",
 )

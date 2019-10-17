@@ -30,17 +30,18 @@ from click import (
 
 from hyperlink import URL
 
-from treq import get as httpGET, json_content as jsonContentFromResponse
+from treq import get as httpGET
 
 from twisted.application.runner._runner import Runner
 from twisted.internet.defer import ensureDeferred
 from twisted.internet.protocol import Factory
 from twisted.logger import Logger
 from twisted.python.failure import Failure
-from twisted.web.http import UNAUTHORIZED
+from twisted.web.http import NOT_FOUND, OK, UNAUTHORIZED
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IResponse
 
+from ._error import Error, ErrorCode
 from ._repository import Repository
 
 
@@ -57,14 +58,23 @@ class ProtocolError(Exception):
     API protocol error.
     """
 
+    url: URL
     message: str
+
+
+
+@attrs(frozen=True, auto_attribs=True, auto_exc=True, slots=True)
+class ProtocolNotSupportedError(ProtocolError):
+    """
+    API protocol error.
+    """
 
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
 class Endpoint(object):
     """
-    API Endpoint URL provider.
+    Computes API Endpoint URLs.
     """
 
     apiVersion: str
@@ -74,7 +84,7 @@ class Endpoint(object):
     @root.validator
     def _validateRoot(self, attribute: Attribute, value: URL) -> None:
         if value.path and value.path[-1]:
-            raise ValueError(f"""Root URL must end in "/": {value!r}""")
+            raise ValueError(f'root URL must end in "/": {value!r}')
 
 
     @property
@@ -93,7 +103,7 @@ class Endpoint(object):
 
 
 @attrs(frozen=False, auto_attribs=True, kw_only=True, cmp=False)
-class _Auth(object):
+class Authorization(object):
     """
     Authorization state.
     """
@@ -134,7 +144,7 @@ class Client(object):
     rootURL: URL = attrib(default=defaultRootURL)
 
     _endpoint: Endpoint = attrib(init=False)
-    _auth: _Auth = attrib(factory=_Auth, init=False)
+    _auth: Authorization = attrib(factory=Authorization, init=False)
 
 
     def __attrs_post_init__(self) -> None:
@@ -144,7 +154,7 @@ class Client(object):
         )
 
 
-    async def get(self, url: URL) -> None:
+    async def get(self, url: URL) -> IResponse:
         """
         Send a GET request.
         """
@@ -171,13 +181,15 @@ class Client(object):
         response = await(get())
 
         if response.code == UNAUTHORIZED:
-            await self.handleUnauthorizedResponse(response)
+            await self.handleUnauthorizedResponse(url, response)
             response = await(get())
 
         return response
 
 
-    async def handleUnauthorizedResponse(self, response: IResponse) -> None:
+    async def handleUnauthorizedResponse(
+        self, url: URL, response: IResponse
+    ) -> None:
         """
         Handle an UNAUTHORIZED response.
         """
@@ -185,7 +197,7 @@ class Client(object):
 
         if not challengeValues:
             raise ProtocolError(
-                "got UNAUTHORIZED response with no WWW-Authenticate header"
+                url, "UNAUTHORIZED response with no WWW-Authenticate header"
             )
 
         challengeValue = challengeValues[-1]
@@ -201,7 +213,7 @@ class Client(object):
                 realmText = challengeParams["realm"]
             except KeyError:
                 raise ProtocolError(
-                    "got WWW-Authenticate header with no realm"
+                    url, "WWW-Authenticate header with no realm"
                 )
 
             realm = URL.fromText(realmText)
@@ -210,21 +222,21 @@ class Client(object):
                 service = challengeParams["service"]
             except KeyError:
                 raise ProtocolError(
-                    "got WWW-Authenticate header with no service"
+                    url, "WWW-Authenticate header with no service"
                 )
 
             error = challengeParams.get("error", None)
             if error is not None:
                 message = await response.text()
                 self.log.error(
-                    "Got error response ({error}) in auth challenge: "
-                    "{message}",
+                    "got error ({error}) in auth challenge: {message}",
                     error=error, message=message,
                 )
 
         else:
             raise ProtocolError(
-                f"got WWW-Authenticate header with unknown mechanism: "
+                url,
+                f"WWW-Authenticate header with unknown mechanism: "
                 f"{challengeValue}"
             )
 
@@ -242,19 +254,19 @@ class Client(object):
         self.log.info("Authenticating at {url}...", url=url)
 
         response = await httpGET(url.asText())
-        json = await jsonContentFromResponse(response)
+        json = await response.json()
 
         try:
             self._auth.token = json["token"]
         except KeyError:
-            raise ProtocolError("got auth response with no token")
+            raise ProtocolError(realm, "got auth response with no token")
 
         # Not captured:
         #   expires_in -> int
         #   issued_at -> date
 
 
-    async def ping(self) -> bool:
+    async def ping(self) -> None:
         """
         Check whether the registry host supports the API version in use by
         the client.
@@ -263,11 +275,26 @@ class Client(object):
 
         self.log.info("Pinging API server at {url}...", url=url)
 
-        await self.get(url)
+        response = await self.get(url)
 
-        return True
+        if response.code == OK:
+            return
 
+        if response.code == NOT_FOUND:
+            raise ProtocolNotSupportedError(
+                url, "server does not support Docker Registry HTTP API V2"
+            )
 
+        if response.code == UNAUTHORIZED:
+            json = await response.json()
+            message = "authorization failed"
+            for error in (Error.fromJSON(e) for e in json.get("errors", [])):
+                self.log.error(
+                    "Error ({error.code.name}): {error.message}", error=error
+                )
+                if error.code is ErrorCode.UNAUTHORIZED:
+                    message = f"{message}: {error.message}"
+            raise ProtocolError(url, message)
 
 #
 # Command line
