@@ -60,6 +60,17 @@ class Error(object):
     Docker Hub API v2 Error.
     """
 
+    @classmethod
+    def fromJSON(cls, json: Dict[str, Any]) -> "Error":
+        codeName = json.get("code", "UNKNOWN")
+        message = json.get("message", "")
+        detail = json.get("detail", None)
+
+        code = ErrorCode[codeName]
+
+        return Error(code=code, message=message, detail=detail)
+
+
     code: ErrorCode
     message: str
     detail: Any
