@@ -93,14 +93,12 @@ class Endpoint(object):
 
 
 @attrs(frozen=False, auto_attribs=True, kw_only=True, cmp=False)
-class _OAuth(object):
+class _Auth(object):
     """
-    Internal mutable state for Client.
+    Authorization state.
     """
 
-    realm:   Optional[URL] = None
-    service: Optional[str] = None
-    token:   Optional[str] = None
+    token: Optional[str] = None
 
 
 
@@ -136,7 +134,7 @@ class Client(object):
     rootURL: URL = attrib(default=defaultRootURL)
 
     _endpoint: Endpoint = attrib(init=False)
-    _oAuth: _OAuth = attrib(factory=_OAuth, init=False)
+    _auth: _Auth = attrib(factory=_Auth, init=False)
 
 
     def __attrs_post_init__(self) -> None:
@@ -152,9 +150,9 @@ class Client(object):
         """
         async def get() -> IResponse:
             headers = Headers({})
-            if self._oAuth.token:
+            if self._auth.token:
                 headers.setRawHeaders(
-                    "Authorization", [f"Bearer {self._oAuth.token}"]
+                    "Authorization", [f"Bearer {self._auth.token}"]
                 )
 
             self.log.info(
@@ -200,16 +198,16 @@ class Client(object):
             }
 
             try:
-                realm = challengeParams["realm"]
+                realmText = challengeParams["realm"]
             except KeyError:
                 raise ProtocolError(
                     "got WWW-Authenticate header with no realm"
                 )
 
-            self._oAuth.realm = URL.fromText(realm)
+            realm = URL.fromText(realmText)
 
             try:
-                self._oAuth.service = challengeParams["service"]
+                service = challengeParams["service"]
             except KeyError:
                 raise ProtocolError(
                     "got WWW-Authenticate header with no service"
@@ -224,17 +222,22 @@ class Client(object):
                     error=error, message=message,
                 )
 
-        await self.getAuthToken()
+        else:
+            raise ProtocolError(
+                f"got WWW-Authenticate header with unknown mechanism: "
+                f"{challengeValue}"
+            )
+
+        await self.getAuthToken(realm, service)
 
 
-    async def getAuthToken(self) -> None:
+    async def getAuthToken(self, realm: URL, service: str) -> None:
         """
         Obtain an authorization token from the registry.
         """
-        assert self._oAuth.realm
-        assert self._oAuth.service
+        # See https://docs.docker.com/registry/spec/auth/token/
 
-        url = self._oAuth.realm.set("service", self._oAuth.service)
+        url = realm.set("service", service)
 
         self.log.info("Authenticating at {url}...", url=url)
 
@@ -242,12 +245,11 @@ class Client(object):
         json = await jsonContentFromResponse(response)
 
         try:
-            self._oAuth.token = json["token"]
+            self._auth.token = json["token"]
         except KeyError:
             raise ProtocolError("got auth response with no token")
 
         # Not captured:
-        #   access_token -> text (same as token?)
         #   expires_in -> int
         #   issued_at -> date
 
