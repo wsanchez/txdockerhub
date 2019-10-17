@@ -93,12 +93,7 @@ class StrategyTests(SynchronousTestCase):
         """
         Generated hex data are valid.
         """
-        try:
-            int(hex, 16)
-        except ValueError as e:  # pragma: no cover
-            self.fail(
-                f"invalid hex data {hex!r}: {e}"
-            )
+        self.assertTrue(any((c in hexDigits) for c in hex))
 
 
     @given(notHexes())
@@ -106,9 +101,7 @@ class StrategyTests(SynchronousTestCase):
         """
         Generated non-hex data are not hex data.
         """
-        self.assertRaises(
-            ValueError, int, notHex, 16
-        )
+        self.assertFalse(any((c in hexDigits) for c in notHex))
 
 
     @given(digests())
