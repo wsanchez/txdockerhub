@@ -18,8 +18,9 @@
 Tests for L{txdockerhub.v2._client}.
 """
 
+from functools import partial
 from string import ascii_letters
-from typing import Any, Callable, Type
+from typing import Any, Callable, Optional, Type
 
 from hyperlink import URL
 
@@ -70,28 +71,29 @@ def versions(draw: Callable) -> str:
 
 
 @composite
-def urls(draw: Callable, collection: bool = False) -> str:
+def urls(draw: Callable, collection: Optional[bool] = None) -> str:
     """
     Strategy that generates URLs.
     """
-    segments = draw(
-        lists(
-            text(
-                alphabet=characters(blacklist_characters="/?#"), max_size=32,
-            ),
-            max_size=16,
-        )
+    urlPathText = partial(
+        text, alphabet=characters(blacklist_characters="/?#"), max_size=32
     )
+
+    segments = draw(lists(urlPathText(), max_size=16))
 
     url = URL(
         scheme=draw(sampled_from(("http", "https"))),
-        host=draw(text(alphabet=ascii_letters)),  # FIXME: wimpy alphabet
+        # FIXME: wimpy host name alphabet
+        host=draw(text(alphabet=ascii_letters, min_size=1)),
         port=draw(integers(min_value=1, max_value=65535)),
         path=segments,
     )
 
     if collection:
         url = url.child("")
+    else:
+        if collection is not None:
+            url = url.child(draw(urlPathText(min_size=1)))
 
     return url
 
@@ -136,6 +138,14 @@ class StrategyTests(SynchronousTestCase):
         self.assertFalse(url.path and url.path[-1])
 
 
+    @given(urls(collection=False))
+    def test_urls_notCollections(self, url: URL) -> None:
+        """
+        Generated URLs are not collections.
+        """
+        self.assertTrue(url.path and url.path[-1])
+
+
 #
 # Tests
 #
@@ -144,6 +154,25 @@ class EndpointTests(SynchronousTestCase):
     """
     Tests for Endpoint.
     """
+
+    @given(versions(), urls(collection=True))
+    def test_root_collection(self, version: str, url: URL) -> None:
+        """
+        Root URL ending in "/" does not raise ValueError.
+        """
+        try:
+            Endpoint(apiVersion=version, root=url)
+        except ValueError:
+            self.fail(str(url))
+
+
+    @given(versions(), urls(collection=False))
+    def test_root_notCollection(self, version: str, url: URL) -> None:
+        """
+        Root URL not ending in "/" raises ValueError.
+        """
+        self.assertRaises(ValueError, Endpoint, apiVersion=version, root=url)
+
 
     @given(endpoints())
     def test_api(self, endpoint: Endpoint) -> None:
