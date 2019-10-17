@@ -203,7 +203,24 @@ class ClientTests(SynchronousTestCase):
     Tests for Client.
     """
 
-    Client
+    @given(urls(collection=True))
+    def test_root_collection(self, url: URL) -> None:
+        """
+        Root URL ending in "/" does not raise ValueError.
+        """
+        try:
+            Client(rootURL=url)
+        except ValueError:
+            self.fail(str(url))
+
+
+    @given(urls(collection=False))
+    def test_root_notCollection(self, url: URL) -> None:
+        """
+        Root URL not ending in "/" raises ValueError.
+        """
+        self.assertRaises(ValueError, Client, rootURL=url)
+
 
     # def test_ping(self) -> None:
     #     client = Client()
