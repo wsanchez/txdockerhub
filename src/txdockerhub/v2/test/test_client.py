@@ -18,9 +18,15 @@
 Tests for L{txdockerhub.v2._client}.
 """
 
+from contextlib import contextmanager
 from functools import partial
 from string import ascii_letters
-from typing import Any, Callable, Optional, Type
+from typing import (
+    Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
+)
+from unittest.mock import patch
+
+from attr import attrs
 
 from hyperlink import URL
 
@@ -29,9 +35,13 @@ from hypothesis.strategies import (
     characters, composite, integers, lists, sampled_from, text
 )
 
+from treq.testing import RequestSequence, StringStubbingResource, StubTreq
+
 from twisted.internet.defer import Deferred, ensureDeferred
 from twisted.python.failure import Failure
 from twisted.trial.unittest import SynchronousTestCase as _SynchronousTestCase
+from twisted.web.http import UNAUTHORIZED
+from twisted.web.http_headers import Headers
 
 from .test_repository import repositories
 from .._client import Client, Endpoint
@@ -39,7 +49,6 @@ from .._repository import Repository
 
 
 __all__ = ()
-
 
 
 # Can get rid of this in Twisted > 19.7
@@ -55,6 +64,131 @@ class SynchronousTestCase(_SynchronousTestCase):
     ) -> Failure:
         deferred = ensureDeferred(deferred)
         return super().failureResultOf(deferred, *expectedExceptionTypes)
+
+
+
+#
+# Helpers for mocking treq
+# treq.testing uses janky tuples for test data. See:
+# https://treq.readthedocs.io/en/release-17.8.0/api.html#treq.testing.RequestSequence
+#
+TreqExpectedRequest = Tuple[
+    bytes,                            # method
+    str,                              # url
+    Dict[bytes, List[bytes]],         # params
+    Dict[bytes, List[bytes]],         # headers
+    bytes,                            # data
+]
+TreqCannedResponse = Tuple[
+    int,                                     # code
+    Dict[bytes, Union[bytes, List[bytes]]],  # headers
+    bytes,                                   # body
+]
+TreqExpectedRequestsAndResponses = Sequence[
+    Tuple[TreqExpectedRequest, TreqCannedResponse]
+]
+
+
+
+@attrs(frozen=True, auto_attribs=True, kw_only=True)
+class ExpectedRequest(Exception):
+    """
+    Expected request.
+    """
+
+    method: str
+    url: URL
+    headers: Headers
+    body: bytes
+
+
+    def asTreqExpectedRequest(self) -> TreqExpectedRequest:
+        """
+        Return a corresponding TreqExpectedRequest.
+        """
+        def params() -> Dict[bytes, List[bytes]]:
+            params: Dict[bytes, List[bytes]] = {}
+            for key, value in self.url.query:
+                values = params.setdefault(key, [])
+                values.append(value)
+            return params
+
+        return (
+            self.method.lower().encode("ascii"),
+            self.url.replace(query=()).asText(), params(),
+            {k: v for k, v in self.headers.getAllRawHeaders()},
+            self.body,
+        )
+
+
+
+@attrs(frozen=True, auto_attribs=True, kw_only=True)
+class CannedResponse(Exception):
+    """
+    Expected response.
+    """
+
+    code: int
+    headers: Headers
+    body: bytes
+
+
+    def asTreqCannedResponse(self) -> TreqCannedResponse:
+        """
+        Return a corresponding TreqCannedResponse.
+        """
+        return (
+            self.code,
+            {k: v for k, v in self.headers.getAllRawHeaders()},
+            self.body,
+        )
+
+
+
+@attrs(frozen=True, auto_attribs=True)
+class ExpectedRequestsAndResponses(Exception):
+    """
+    Expected request and response sequence.
+    """
+
+    requestsAndResponses: Sequence[
+        Tuple[ExpectedRequest, CannedResponse]
+    ]
+
+    exceptionClass: Type = AssertionError
+
+
+    def asTreqExpectedRequestsAndResponses(
+        self
+    ) -> TreqExpectedRequestsAndResponses:
+        return tuple(
+            (
+                request.asTreqExpectedRequest(),
+                response.asTreqCannedResponse(),
+            )
+            for request, response in self.requestsAndResponses
+        )
+
+
+    def _fail(self, error: Any) -> None:
+        raise self.exceptionClass(error)
+
+
+    @contextmanager
+    def testing(self) -> Iterator[None]:
+        failures: List[Failure] = []
+
+        requestSequence = RequestSequence(
+            self.asTreqExpectedRequestsAndResponses(), failures.append
+        )
+        stubTreq = StubTreq(StringStubbingResource(requestSequence))
+
+        with patch("txdockerhub.v2._client.httpGET", stubTreq.get):
+            with requestSequence.consume(self._fail):
+                yield
+
+        if failures:
+            self._fail(failures)
 
 
 
@@ -222,6 +356,36 @@ class ClientTests(SynchronousTestCase):
         self.assertRaises(ValueError, Client, rootURL=url)
 
 
-    # def test_ping(self) -> None:
-    #     client = Client()
-    #     self.successResultOf(client.ping())
+    def test_ping_noToken(self) -> None:
+        """
+        Ping when a token is not present does not send an Authorization header.
+        """
+        client = Client()
+        expectedRequestsAndResponses = ExpectedRequestsAndResponses(
+            (
+                (
+                    ExpectedRequest(
+                        method="GET",
+                        url=client._endpoint.api,
+                        headers=Headers({
+                            "Connection": ["close"],
+                            "Accept-Encoding": ["gzip"],
+                            "Host": ["registry-1.docker.io"],
+                        }),
+                        body=b"",
+                    ),
+                    CannedResponse(
+                        code=UNAUTHORIZED,
+                        headers=Headers({
+                            "WWW-Authenticate": [
+                                'Bearer realm="foo",service="bar"'
+                            ],
+                        }),
+                        body=b"",
+                    ),
+                ),
+            ),
+            exceptionClass=self.failureException,
+        )
+        with expectedRequestsAndResponses.testing():
+            self.successResultOf(client.ping())

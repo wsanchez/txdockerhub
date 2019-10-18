@@ -52,7 +52,7 @@ dockerHubRegistryURL = "https://registry-1.docker.io/"
 
 
 
-@attrs(frozen=True, auto_attribs=True, auto_exc=True, slots=True)
+@attrs(auto_attribs=True, auto_exc=True)
 class ProtocolError(Exception):
     """
     API protocol error.
@@ -63,7 +63,7 @@ class ProtocolError(Exception):
 
 
 
-@attrs(frozen=True, auto_attribs=True, auto_exc=True, slots=True)
+@attrs(auto_attribs=True, auto_exc=True)
 class ProtocolNotSupportedError(ProtocolError):
     """
     API protocol error.

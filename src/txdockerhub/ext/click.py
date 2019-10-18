@@ -28,7 +28,7 @@ class Internal(Enum):
 
 
 
-@attrs(auto_attribs=True, slots=True, kw_only=True)
+@attrs(auto_attribs=True, kw_only=True)
 class ClickTestResult(object):
     """
     Captured results after testing a click command.
