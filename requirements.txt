@@ -12,7 +12,7 @@ Twisted==19.10.0
 asn1crypto==1.2.0
 Automat==0.7.0
 certifi==2019.9.11
-cffi==1.13.0
+cffi==1.13.2
 chardet==3.0.4
 constantly==15.1.0
 cryptography==2.8
