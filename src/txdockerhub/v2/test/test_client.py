@@ -22,7 +22,16 @@ from contextlib import contextmanager
 from functools import partial
 from string import ascii_letters
 from typing import (
-    Any, Callable, Dict, Iterator, List, Optional, Sequence, Tuple, Type, Union
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
 )
 from unittest.mock import patch
 
@@ -32,7 +41,12 @@ from hyperlink import URL
 
 from hypothesis import given
 from hypothesis.strategies import (
-    characters, composite, integers, lists, sampled_from, text
+    characters,
+    composite,
+    integers,
+    lists,
+    sampled_from,
+    text,
 )
 
 from treq.testing import RequestSequence, StringStubbingResource, StubTreq
@@ -53,11 +67,9 @@ __all__ = ()
 
 # Can get rid of this in Twisted > 19.7
 class SynchronousTestCase(_SynchronousTestCase):
-
     def successResultOf(self, deferred: Deferred) -> Any:
         deferred = ensureDeferred(deferred)
         return super().successResultOf(deferred)
-
 
     def failureResultOf(
         self, deferred: Deferred, *expectedExceptionTypes: Type[BaseException]
@@ -66,28 +78,26 @@ class SynchronousTestCase(_SynchronousTestCase):
         return super().failureResultOf(deferred, *expectedExceptionTypes)
 
 
-
 #
 # Helpers for mocking treq
 # treq.testing uses janky tuples for test data. See:
 # https://treq.readthedocs.io/en/release-17.8.0/api.html#treq.testing.RequestSequence
 #
 TreqExpectedRequest = Tuple[
-    bytes,                            # method
-    str,                              # url
-    Dict[bytes, List[bytes]],         # params
-    Dict[bytes, List[bytes]],         # headers
-    bytes,                            # data
+    bytes,  # method
+    str,  # url
+    Dict[bytes, List[bytes]],  # params
+    Dict[bytes, List[bytes]],  # headers
+    bytes,  # data
 ]
 TreqCannedResponse = Tuple[
-    int,                                     # code
+    int,  # code
     Dict[bytes, Union[bytes, List[bytes]]],  # headers
-    bytes,                                   # body
+    bytes,  # body
 ]
 TreqExpectedRequestsAndResponses = Sequence[
     Tuple[TreqExpectedRequest, TreqCannedResponse]
 ]
-
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
@@ -101,11 +111,11 @@ class ExpectedRequest(Exception):
     headers: Headers
     body: bytes
 
-
     def asTreqExpectedRequest(self) -> TreqExpectedRequest:
         """
         Return a corresponding TreqExpectedRequest.
         """
+
         def params() -> Dict[bytes, List[bytes]]:
             params: Dict[bytes, List[bytes]] = {}
             for key, value in self.url.query:
@@ -115,11 +125,11 @@ class ExpectedRequest(Exception):
 
         return (
             self.method.lower().encode("ascii"),
-            self.url.replace(query=()).asText(), params(),
+            self.url.replace(query=()).asText(),
+            params(),
             {k: v for k, v in self.headers.getAllRawHeaders()},
             self.body,
         )
-
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
@@ -132,7 +142,6 @@ class CannedResponse(Exception):
     headers: Headers
     body: bytes
 
-
     def asTreqCannedResponse(self) -> TreqCannedResponse:
         """
         Return a corresponding TreqCannedResponse.
@@ -144,35 +153,26 @@ class CannedResponse(Exception):
         )
 
 
-
 @attrs(frozen=True, auto_attribs=True)
 class ExpectedRequestsAndResponses(Exception):
     """
     Expected request and response sequence.
     """
 
-    requestsAndResponses: Sequence[
-        Tuple[ExpectedRequest, CannedResponse]
-    ]
+    requestsAndResponses: Sequence[Tuple[ExpectedRequest, CannedResponse]]
 
     exceptionClass: Type = AssertionError
 
-
     def asTreqExpectedRequestsAndResponses(
-        self
+        self,
     ) -> TreqExpectedRequestsAndResponses:
         return tuple(
-            (
-                request.asTreqExpectedRequest(),
-                response.asTreqCannedResponse(),
-            )
+            (request.asTreqExpectedRequest(), response.asTreqCannedResponse(),)
             for request, response in self.requestsAndResponses
         )
 
-
     def _fail(self, error: Any) -> None:
         raise self.exceptionClass(error)
-
 
     @contextmanager
     def testing(self) -> Iterator[None]:
@@ -191,10 +191,10 @@ class ExpectedRequestsAndResponses(Exception):
             self._fail(failures)
 
 
-
 #
 # Strategies
 #
+
 
 @composite
 def versions(draw: Callable) -> str:
@@ -242,7 +242,6 @@ def endpoints(draw: Callable) -> Endpoint:
     )
 
 
-
 class StrategyTests(SynchronousTestCase):
     """
     Tests for test strategies.
@@ -255,7 +254,6 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertIsInstance(version, str)
 
-
     @given(urls())
     def test_urls(self, url: URL) -> None:
         """
@@ -263,14 +261,12 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertIsInstance(url, URL)
 
-
     @given(urls(collection=True))
     def test_urls_collections(self, url: URL) -> None:
         """
         Generated URLs are collections.
         """
         self.assertFalse(url.path and url.path[-1])
-
 
     @given(urls(collection=False))
     def test_urls_notCollections(self, url: URL) -> None:
@@ -283,6 +279,7 @@ class StrategyTests(SynchronousTestCase):
 #
 # Tests
 #
+
 
 class EndpointTests(SynchronousTestCase):
     """
@@ -299,14 +296,12 @@ class EndpointTests(SynchronousTestCase):
         except ValueError:
             self.fail(str(url))
 
-
     @given(versions(), urls(collection=False))
     def test_root_notCollection(self, version: str, url: URL) -> None:
         """
         Root URL not ending in "/" raises ValueError.
         """
         self.assertRaises(ValueError, Endpoint, apiVersion=version, root=url)
-
 
     @given(endpoints())
     def test_api(self, endpoint: Endpoint) -> None:
@@ -317,7 +312,6 @@ class EndpointTests(SynchronousTestCase):
             endpoint.api, endpoint.root.click(f"v{endpoint.apiVersion}/")
         )
 
-
     @given(endpoints(), repositories())
     def test_repository(
         self, endpoint: Endpoint, repository: Repository
@@ -327,9 +321,8 @@ class EndpointTests(SynchronousTestCase):
         """
         self.assertEqual(
             endpoint.repository(repository),
-            endpoint.root.click(f"v{endpoint.apiVersion}/{repository.name}/")
+            endpoint.root.click(f"v{endpoint.apiVersion}/{repository.name}/"),
         )
-
 
 
 class ClientTests(SynchronousTestCase):
@@ -347,14 +340,12 @@ class ClientTests(SynchronousTestCase):
         except ValueError:
             self.fail(str(url))
 
-
     @given(urls(collection=False))
     def test_root_notCollection(self, url: URL) -> None:
         """
         Root URL not ending in "/" raises ValueError.
         """
         self.assertRaises(ValueError, Client, rootURL=url)
-
 
     def test_ping_noToken(self) -> None:
         """
@@ -367,20 +358,24 @@ class ClientTests(SynchronousTestCase):
                     ExpectedRequest(
                         method="GET",
                         url=client._endpoint.api,
-                        headers=Headers({
-                            "Connection": ["close"],
-                            "Accept-Encoding": ["gzip"],
-                            "Host": ["registry-1.docker.io"],
-                        }),
+                        headers=Headers(
+                            {
+                                "Connection": ["close"],
+                                "Accept-Encoding": ["gzip"],
+                                "Host": ["registry-1.docker.io"],
+                            }
+                        ),
                         body=b"",
                     ),
                     CannedResponse(
                         code=UNAUTHORIZED,
-                        headers=Headers({
-                            "WWW-Authenticate": [
-                                'Bearer realm="foo",service="bar"'
-                            ],
-                        }),
+                        headers=Headers(
+                            {
+                                "WWW-Authenticate": [
+                                    'Bearer realm="foo",service="bar"'
+                                ],
+                            }
+                        ),
                         body=b"",
                     ),
                 ),

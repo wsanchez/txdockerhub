@@ -30,13 +30,10 @@ __all__ = ()
 
 # Docker Hub produces lowercase hex digits
 lowerCaseHexDigits = upperCaseHexDigits.lower()
-hexDigits = "".join(
-    frozenset(lowerCaseHexDigits + upperCaseHexDigits)
-)
+hexDigits = "".join(frozenset(lowerCaseHexDigits + upperCaseHexDigits))
 
 
 asHex = hex
-
 
 
 class AutoName(str, Enum):
@@ -45,7 +42,6 @@ class AutoName(str, Enum):
         name: str, start: int, count: int, last_values: Sequence[str]
     ) -> str:
         return name
-
 
 
 @unique
@@ -59,12 +55,10 @@ class DigestAlgorithm(AutoName):
     sha256 = auto()
 
 
-
 class InvalidDigestError(ValueError):
     """
     Invalid digest.
     """
-
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
@@ -82,9 +76,7 @@ class Digest(object):
         try:
             algorithmName, hexData = text.split(":", 1)
         except ValueError:
-            raise InvalidDigestError(
-                f"digest must include separator: {text!r}"
-            )
+            raise InvalidDigestError(f"digest must include separator: {text!r}")
 
         try:
             algorithm = DigestAlgorithm[algorithmName]
@@ -96,14 +88,12 @@ class Digest(object):
 
         if any((digit not in hexDigits) for digit in hexData):
             raise InvalidDigestError(
-                f"invalid hexadecimal data {hexData!r} "
-                f"in digest {text!r}"
+                f"invalid hexadecimal data {hexData!r} " f"in digest {text!r}"
             )
 
         hex = int(hexData, 16)
 
         return Digest(algorithm=algorithm, hex=hex)
-
 
     #
     # Instance attributes
@@ -111,7 +101,6 @@ class Digest(object):
 
     algorithm: DigestAlgorithm = DigestAlgorithm.sha256
     hex: int
-
 
     def asText(self) -> str:
         return f"{self.algorithm.value}:{asHex(self.hex)[2:]}"

@@ -25,7 +25,8 @@ from attr import Attribute, attrib, attrs
 
 from click import (
     group as commandGroup,
-    option as commandOption, version_option as versionOption,
+    option as commandOption,
+    version_option as versionOption,
 )
 
 from hyperlink import URL
@@ -51,7 +52,6 @@ __all__ = ()
 dockerHubRegistryURL = "https://registry-1.docker.io/"
 
 
-
 @attrs(auto_attribs=True, auto_exc=True)
 class ProtocolError(Exception):
     """
@@ -62,13 +62,11 @@ class ProtocolError(Exception):
     message: str
 
 
-
 @attrs(auto_attribs=True, auto_exc=True)
 class ProtocolNotSupportedError(ProtocolError):
     """
     API protocol error.
     """
-
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
@@ -80,17 +78,14 @@ class Endpoint(object):
     apiVersion: str
     root: URL = attrib()
 
-
     @root.validator
     def _validateRoot(self, attribute: Attribute, value: URL) -> None:
         if value.path and value.path[-1]:
             raise ValueError(f'root URL must end in "/": {value!r}')
 
-
     @property
     def api(self) -> URL:
         return self.root.click(f"v{self.apiVersion}/")
-
 
     def repository(self, repository: Repository) -> URL:
         url = self.api
@@ -101,7 +96,6 @@ class Endpoint(object):
         return url
 
 
-
 @attrs(frozen=False, auto_attribs=True, kw_only=True, eq=False)
 class Authorization(object):
     """
@@ -109,7 +103,6 @@ class Authorization(object):
     """
 
     token: Optional[str] = None
-
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
@@ -128,14 +121,12 @@ class Client(object):
 
     defaultRootURL = URL.fromText(dockerHubRegistryURL)
 
-
     @classmethod
     def main(cls) -> None:
         """
         Command line entry point.
         """
         main()
-
 
     #
     # Instance attributes
@@ -146,18 +137,18 @@ class Client(object):
     _endpoint: Endpoint = attrib(init=False)
     _auth: Authorization = attrib(factory=Authorization, init=False)
 
-
     def __attrs_post_init__(self) -> None:
         object.__setattr__(
-            self, "_endpoint",
-            Endpoint(apiVersion=self.apiVersion, root=self.rootURL)
+            self,
+            "_endpoint",
+            Endpoint(apiVersion=self.apiVersion, root=self.rootURL),
         )
-
 
     async def get(self, url: URL) -> IResponse:
         """
         Send a GET request.
         """
+
         async def get() -> IResponse:
             headers = Headers({})
             if self._auth.token:
@@ -178,14 +169,13 @@ class Client(object):
 
             return response
 
-        response = await(get())
+        response = await (get())
 
         if response.code == UNAUTHORIZED:
             await self.handleUnauthorizedResponse(url, response)
-            response = await(get())
+            response = await (get())
 
         return response
-
 
     async def handleUnauthorizedResponse(
         self, url: URL, response: IResponse
@@ -205,8 +195,9 @@ class Client(object):
         if challengeValue.startswith("Bearer "):
             challengeParams = {
                 k: v[1:-1] if v.startswith('"') and v.endswith('"') else v
-                for k, v in
-                (token.split("=") for token in challengeValue[7:].split(","))
+                for k, v in (
+                    token.split("=") for token in challengeValue[7:].split(",")
+                )
             }
 
             try:
@@ -230,18 +221,18 @@ class Client(object):
                 message = await response.text()
                 self.log.error(
                     "got error ({error}) in auth challenge: {message}",
-                    error=error, message=message,
+                    error=error,
+                    message=message,
                 )
 
         else:
             raise ProtocolError(
                 url,
                 f"WWW-Authenticate header with unknown mechanism: "
-                f"{challengeValue}"
+                f"{challengeValue}",
             )
 
         await self.getAuthToken(realm, service)
-
 
     async def getAuthToken(self, realm: URL, service: str) -> None:
         """
@@ -264,7 +255,6 @@ class Client(object):
         # Not captured:
         #   expires_in -> int
         #   issued_at -> date
-
 
     async def ping(self) -> None:
         """
@@ -296,9 +286,11 @@ class Client(object):
                     message = f"{message}: {error.message}"
             raise ProtocolError(url, message)
 
+
 #
 # Command line
 #
+
 
 def run(methodName: str, **kwargs: Any) -> None:
     """
@@ -319,8 +311,9 @@ def run(methodName: str, **kwargs: Any) -> None:
         def error(failure: Failure) -> None:
             client.log.failure(
                 "While running {methodName}({args()})",
-                failure=failure, methodName=methodName,
-                args=lambda: ", ".join(f"{k}={v!r}" for k, v in kwargs.items())
+                failure=failure,
+                methodName=methodName,
+                args=lambda: ", ".join(f"{k}={v!r}" for k, v in kwargs.items()),
             )
             reactor.stop()
 
@@ -346,7 +339,9 @@ def main() -> None:
 
 @main.command()
 @commandOption(
-    "--root", show_default=True, show_envvar=True,
+    "--root",
+    show_default=True,
+    show_envvar=True,
     help="URL for the repository API base endpoint",
 )
 def ping(root: str = dockerHubRegistryURL) -> None:

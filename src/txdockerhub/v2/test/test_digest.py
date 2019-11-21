@@ -23,7 +23,11 @@ from typing import Callable
 from hypothesis import given
 from hypothesis.searchstrategy import SearchStrategy
 from hypothesis.strategies import (
-    characters, composite, integers, sampled_from, text
+    characters,
+    composite,
+    integers,
+    sampled_from,
+    text,
 )
 
 from twisted.trial.unittest import SynchronousTestCase
@@ -39,6 +43,7 @@ asHex = hex
 #
 # Strategies
 #
+
 
 def algorithms() -> SearchStrategy:  # DigestAlgorithm
     """
@@ -69,10 +74,8 @@ def digests(draw: Callable) -> Digest:
     Strategy that generates digests.
     """
     return Digest(
-        algorithm=draw(algorithms()),
-        hex=draw(integers(min_value=0)),
+        algorithm=draw(algorithms()), hex=draw(integers(min_value=0)),
     )
-
 
 
 class StrategyTests(SynchronousTestCase):
@@ -87,7 +90,6 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertIn(algorithm, DigestAlgorithm)
 
-
     @given(hexes())
     def test_hexes(self, hex: str) -> None:
         """
@@ -95,14 +97,12 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertTrue(any((c in hexDigits) for c in hex))
 
-
     @given(notHexes())
     def test_notHexes(self, notHex: str) -> None:
         """
         Generated non-hex data are not hex data.
         """
         self.assertFalse(any((c in hexDigits) for c in notHex))
-
 
     @given(digests())
     def test_digests(self, digest: Digest) -> None:
@@ -112,10 +112,10 @@ class StrategyTests(SynchronousTestCase):
         self.assertIsInstance(digest, Digest)
 
 
-
 #
 # Tests
 #
+
 
 class DigestTests(SynchronousTestCase):
     """
@@ -131,7 +131,6 @@ class DigestTests(SynchronousTestCase):
         self.assertEqual(digest.algorithm, algorithm)
         self.assertEqual(digest.hex, int(hex, 16))
 
-
     @given(text(alphabet=characters(blacklist_characters=":")))
     def test_fromText_noColon(self, text: str) -> None:
         """
@@ -140,7 +139,6 @@ class DigestTests(SynchronousTestCase):
         """
         e = self.assertRaises(InvalidDigestError, Digest.fromText, text)
         self.assertEqual(str(e), f"digest must include separator: {text!r}")
-
 
     @given(algorithms(), notHexes())
     def test_fromText_badHex(
@@ -155,7 +153,6 @@ class DigestTests(SynchronousTestCase):
         self.assertEqual(
             str(e), f"invalid hexadecimal data {notHex!r} in digest {text!r}"
         )
-
 
     @given(
         text(alphabet=characters(blacklist_characters=":")).filter(
@@ -175,7 +172,6 @@ class DigestTests(SynchronousTestCase):
             f"unknown digest algorithm {algorithm!r} in digest {text!r}",
         )
 
-
     @given(algorithms(), integers())
     def test_init(self, algorithm: DigestAlgorithm, hex: int) -> None:
         """
@@ -184,7 +180,6 @@ class DigestTests(SynchronousTestCase):
         digest = Digest(algorithm=algorithm, hex=hex)
         self.assertEqual(digest.algorithm, algorithm)
         self.assertEqual(digest.hex, hex)
-
 
     @given(algorithms(), integers())
     def test_asText(self, algorithm: DigestAlgorithm, hex: int) -> None:
