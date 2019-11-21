@@ -39,7 +39,7 @@ from attr import attrs
 
 from hyperlink import URL
 
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis.strategies import (
     characters,
     composite,
@@ -247,6 +247,7 @@ class StrategyTests(SynchronousTestCase):
     Tests for test strategies.
     """
 
+    @settings(max_examples=10)
     @given(versions())
     def test_versions(self, version: str) -> None:
         """
@@ -254,6 +255,7 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertIsInstance(version, str)
 
+    @settings(max_examples=10)
     @given(urls())
     def test_urls(self, url: URL) -> None:
         """
@@ -261,6 +263,7 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertIsInstance(url, URL)
 
+    @settings(max_examples=10)
     @given(urls(collection=True))
     def test_urls_collections(self, url: URL) -> None:
         """
@@ -268,6 +271,7 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertFalse(url.path and url.path[-1])
 
+    @settings(max_examples=10)
     @given(urls(collection=False))
     def test_urls_notCollections(self, url: URL) -> None:
         """
@@ -286,6 +290,7 @@ class EndpointTests(SynchronousTestCase):
     Tests for Endpoint.
     """
 
+    @settings(max_examples=10)
     @given(versions(), urls(collection=True))
     def test_root_collection(self, version: str, url: URL) -> None:
         """
@@ -296,6 +301,7 @@ class EndpointTests(SynchronousTestCase):
         except ValueError:
             self.fail(str(url))
 
+    @settings(max_examples=10)
     @given(versions(), urls(collection=False))
     def test_root_notCollection(self, version: str, url: URL) -> None:
         """
@@ -330,6 +336,7 @@ class ClientTests(SynchronousTestCase):
     Tests for Client.
     """
 
+    @settings(max_examples=10)
     @given(urls(collection=True))
     def test_root_collection(self, url: URL) -> None:
         """
@@ -340,6 +347,7 @@ class ClientTests(SynchronousTestCase):
         except ValueError:
             self.fail(str(url))
 
+    @settings(max_examples=10)
     @given(urls(collection=False))
     def test_root_notCollection(self, url: URL) -> None:
         """

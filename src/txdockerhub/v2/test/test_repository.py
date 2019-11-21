@@ -21,7 +21,7 @@ Tests for L{txdockerhub.v2._repository}.
 from re import compile as regexCompile
 from typing import Any, Callable, Optional, Sequence
 
-from hypothesis import assume, given, note
+from hypothesis import assume, given, note, settings
 from hypothesis.searchstrategy import SearchStrategy
 from hypothesis.strategies import (
     characters,
@@ -155,6 +155,7 @@ class StrategyTests(SynchronousTestCase):
     Tests for test strategies.
     """
 
+    @settings(max_examples=10)
     @given(data())
     def test_components_length(self, data: DataStrategy) -> None:
         """
@@ -175,6 +176,7 @@ class StrategyTests(SynchronousTestCase):
         """
         self.assertRegex(component, componentRegex)
 
+    @settings(max_examples=10)
     @given(data())
     def test_repositoryNames_maxLength(self, data: DataStrategy) -> None:
         """
@@ -267,6 +269,7 @@ class RepositoryTests(SynchronousTestCase):
             str(e), "repository name path component may not be empty"
         )
 
+    @settings(max_examples=10)
     @given(
         sampled_from(Repository.pathComponentCharacters),
         text(
@@ -372,6 +375,7 @@ class RepositoryTests(SynchronousTestCase):
             ),
         )
 
+    @settings(max_examples=10)
     @given(
         componentText(max_size=(Repository.maxPathComponentLength - 1)),
         pathComponentSeparators(),
@@ -471,6 +475,7 @@ class RepositoryTests(SynchronousTestCase):
         )
         self.assertEqual(str(e), "repository name may not be empty")
 
+    @settings(max_examples=10)
     @given(
         sampled_from(Repository.pathComponentCharacters),
         text(
