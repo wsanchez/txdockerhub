@@ -27,12 +27,10 @@ from attr import Attribute, attrib, attrs
 __all__ = ()
 
 
-
 class InvalidRepositoryNameError(ValueError):
     """
     Invalid repository name.
     """
-
 
 
 @attrs(frozen=True, auto_attribs=True, kw_only=True)
@@ -55,7 +53,6 @@ class Repository(object):
     nameSeparator: ClassVar[str] = "/"
     maxNameLength: ClassVar[int] = 256
 
-
     @classmethod
     def namePathComponents(cls, name: str) -> Sequence[str]:
         """
@@ -67,7 +64,6 @@ class Repository(object):
                 f"repository name may not be empty"
             )
         return name.split(cls.nameSeparator)
-
 
     @classmethod
     def validateNamePathComponent(cls, component: str) -> None:
@@ -107,9 +103,7 @@ class Repository(object):
 
         indexes: List[int] = []
         for separator in cls.pathComponentSeparators:
-            indexes.extend(
-                i for i, c in enumerate(component) if c == separator
-            )
+            indexes.extend(i for i, c in enumerate(component) if c == separator)
         indexes.sort()
         if indexes:
             last = indexes[0]
@@ -122,7 +116,6 @@ class Repository(object):
                         f"{component!r}"
                     )
                 last = i
-
 
     @classmethod
     def validateName(cls, name: str) -> None:
@@ -145,7 +138,6 @@ class Repository(object):
 
         for component in components:
             cls.validateNamePathComponent(component)
-
 
     #
     # Instance attributes
