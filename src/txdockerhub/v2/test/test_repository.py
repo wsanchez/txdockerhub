@@ -19,7 +19,7 @@ Tests for L{txdockerhub.v2._repository}.
 """
 
 from re import compile as regexCompile
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Pattern, Sequence
 
 from hypothesis import assume, given, note, settings
 from hypothesis.searchstrategy import SearchStrategy
@@ -36,7 +36,7 @@ from hypothesis.strategies import (
     tuples,
 )
 
-from twisted.trial.unittest import SynchronousTestCase
+from twisted.trial.unittest import SynchronousTestCase as _SynchronousTestCase
 
 from .._repository import InvalidRepositoryNameError, Repository
 
@@ -150,6 +150,22 @@ def repositories(draw: Callable) -> Repository:
     return Repository(name=draw(repositoryNames()))
 
 
+class SynchronousTestCase(_SynchronousTestCase):
+    def assertFullRegex(
+        self, text: str, regex: Pattern[str], message: Optional[str] = None
+    ) -> None:
+        if message is None:
+            message = f"{text!r} does not match {regex}"
+        self.assertIsNotNone(regex.fullmatch(text), message)
+
+    def assertNotFullRegex(
+        self, text: str, regex: Pattern[str], message: Optional[str] = None
+    ) -> None:
+        if message is None:
+            message = f"{text!r} does not match {regex}"
+        self.assertIsNone(regex.fullmatch(text), message)
+
+
 class StrategyTests(SynchronousTestCase):
     """
     Tests for test strategies.
@@ -174,7 +190,7 @@ class StrategyTests(SynchronousTestCase):
         Generated repository name path components match the required regular
         expression.
         """
-        self.assertRegex(component, componentRegex)
+        self.assertFullRegex(component, componentRegex)
 
     @settings(max_examples=10)
     @given(data())
@@ -454,7 +470,7 @@ class RepositoryTests(SynchronousTestCase):
         try:
             Repository.validateNamePathComponent(component)
         except InvalidRepositoryNameError as e:
-            self.assertNotRegex(
+            self.assertNotFullRegex(
                 component,
                 componentRegex,
                 (
@@ -463,7 +479,7 @@ class RepositoryTests(SynchronousTestCase):
                 ),
             )
         else:
-            self.assertRegex(component, componentRegex)
+            self.assertFullRegex(component, componentRegex)
 
     def test_validateName_empty(self) -> None:
         """
@@ -514,7 +530,7 @@ class RepositoryTests(SynchronousTestCase):
         try:
             Repository.validateName(name)
         except InvalidRepositoryNameError as e:
-            self.assertNotRegex(
+            self.assertNotFullRegex(
                 name,
                 componentRegex,
                 (
@@ -523,7 +539,7 @@ class RepositoryTests(SynchronousTestCase):
                 ),
             )
         else:
-            self.assertRegex(name, repositoryNameRegex)
+            self.assertFullRegex(name, repositoryNameRegex)
 
     @given(text(min_size=1))
     def test_init_validateName_regex(self, name: str) -> None:
@@ -534,7 +550,7 @@ class RepositoryTests(SynchronousTestCase):
         try:
             Repository(name=name)
         except InvalidRepositoryNameError as e:
-            self.assertNotRegex(
+            self.assertNotFullRegex(
                 name,
                 componentRegex,
                 (
@@ -543,4 +559,4 @@ class RepositoryTests(SynchronousTestCase):
                 ),
             )
         else:
-            self.assertRegex(name, repositoryNameRegex)
+            self.assertFullRegex(name, repositoryNameRegex)

@@ -114,8 +114,7 @@ install_requirements = [
     "hyperlink",
     "pyOpenSSL",
     "service-identity",
-    "treq",
-    "Twisted",
+    "Twisted>=19.10",
 ]
 
 extras_requirements = {}

@@ -31,13 +31,12 @@ from click import (
 
 from hyperlink import URL
 
-from treq import get as httpGET
-
 from twisted.application.runner._runner import Runner
 from twisted.internet.defer import ensureDeferred
 from twisted.internet.protocol import Factory
 from twisted.logger import Logger
 from twisted.python.failure import Failure
+from twisted.web.client import Agent, HTTPConnectionPool
 from twisted.web.http import NOT_FOUND, OK, UNAUTHORIZED
 from twisted.web.http_headers import Headers
 from twisted.web.iweb import IResponse
@@ -50,6 +49,7 @@ __all__ = ()
 
 
 dockerHubRegistryURL = "https://registry-1.docker.io/"
+emptyHeaders = Headers({})
 
 
 @attrs(auto_attribs=True, auto_exc=True)
@@ -119,6 +119,8 @@ class Client(object):
 
     apiVersion: ClassVar[str] = "2"
 
+    _connectionPool_: ClassVar[Optional[HTTPConnectionPool]] = None
+
     defaultRootURL = URL.fromText(dockerHubRegistryURL)
 
     @classmethod
@@ -127,6 +129,12 @@ class Client(object):
         Command line entry point.
         """
         main()
+
+    @classmethod
+    def _connectionPool(cls) -> HTTPConnectionPool:
+        if cls._connectionPool_ is None:
+            cls._connectionPool_ = HTTPConnectionPool()
+        return cls._connectionPool_
 
     #
     # Instance attributes
@@ -142,6 +150,17 @@ class Client(object):
             self,
             "_endpoint",
             Endpoint(apiVersion=self.apiVersion, root=self.rootURL),
+        )
+
+    async def httpGET(
+        self, url: URL, headers: Headers = emptyHeaders
+    ) -> IResponse:
+        from twisted.internet import reactor
+
+        agent = Agent(reactor, pool=self._connectionPool())
+
+        return agent.request(
+            b"GET", url.asText().encode("utf-8"), headers, None
         )
 
     async def get(self, url: URL) -> IResponse:
@@ -160,7 +179,7 @@ class Client(object):
                 "GET: {url}\nHeaders: {headers}", url=url, headers=headers
             )
 
-            response = await httpGET(url.asText(), headers=headers)
+            response = await self.httpGET(url, headers=headers)
 
             self.log.info(
                 "Response: {response}\nHeaders: {response.headers}",
@@ -244,7 +263,7 @@ class Client(object):
 
         self.log.info("Authenticating at {url}...", url=url)
 
-        response = await httpGET(url.asText())
+        response = await self.httpGET(url)
         json = await response.json()
 
         try:

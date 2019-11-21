@@ -1,5 +1,6 @@
 /.hypothesis
 /.mypy_cache
 /.tox
+/htmlcov/
 /src/*.egg-info/
 __pycache__/
