@@ -205,7 +205,7 @@ def versions(draw: Callable) -> str:
 
 
 @composite
-def urls(draw: Callable, collection: Optional[bool] = None) -> str:
+def urls(draw: Callable, collection: Optional[bool] = None) -> URL:
     """
     Strategy that generates URLs.
     """

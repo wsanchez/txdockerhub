@@ -102,7 +102,7 @@ class Endpoint(object):
 
 
 
-@attrs(frozen=False, auto_attribs=True, kw_only=True, cmp=False)
+@attrs(frozen=False, auto_attribs=True, kw_only=True, eq=False)
 class Authorization(object):
     """
     Authorization state.
