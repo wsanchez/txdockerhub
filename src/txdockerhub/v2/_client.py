@@ -65,7 +65,7 @@ class ProtocolError(Exception):
 @attrs(auto_attribs=True, auto_exc=True)
 class ProtocolNotSupportedError(ProtocolError):
     """
-    API protocol error.
+    Protocol not supported.
     """
 
 
@@ -152,7 +152,7 @@ class Client(object):
             Endpoint(apiVersion=self.apiVersion, root=self.rootURL),
         )
 
-    async def httpGET(
+    async def _httpGET(
         self, url: URL, headers: Headers = emptyHeaders
     ) -> IResponse:
         from twisted.internet import reactor
@@ -163,7 +163,7 @@ class Client(object):
             b"GET", url.asText().encode("utf-8"), headers, None
         )
 
-    async def get(self, url: URL) -> IResponse:
+    async def _get(self, url: URL) -> IResponse:
         """
         Send a GET request.
         """
@@ -179,7 +179,7 @@ class Client(object):
                 "GET: {url}\nHeaders: {headers}", url=url, headers=headers
             )
 
-            response = await self.httpGET(url, headers=headers)
+            response = await self._httpGET(url, headers=headers)
 
             self.log.info(
                 "Response: {response}\nHeaders: {response.headers}",
@@ -191,12 +191,12 @@ class Client(object):
         response = await (get())
 
         if response.code == UNAUTHORIZED:
-            await self.handleUnauthorizedResponse(url, response)
+            await self._handleUnauthorizedResponse(url, response)
             response = await (get())
 
         return response
 
-    async def handleUnauthorizedResponse(
+    async def _handleUnauthorizedResponse(
         self, url: URL, response: IResponse
     ) -> None:
         """
@@ -251,9 +251,9 @@ class Client(object):
                 f"{challengeValue}",
             )
 
-        await self.getAuthToken(realm, service)
+        await self._getAuthToken(realm, service)
 
-    async def getAuthToken(self, realm: URL, service: str) -> None:
+    async def _getAuthToken(self, realm: URL, service: str) -> None:
         """
         Obtain an authorization token from the registry.
         """
@@ -263,7 +263,7 @@ class Client(object):
 
         self.log.info("Authenticating at {url}...", url=url)
 
-        response = await self.httpGET(url)
+        response = await self._httpGET(url)
         json = await response.json()
 
         try:
@@ -284,7 +284,7 @@ class Client(object):
 
         self.log.info("Pinging API server at {url}...", url=url)
 
-        response = await self.get(url)
+        response = await self._get(url)
 
         if response.code == OK:
             return
