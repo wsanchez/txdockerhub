@@ -20,7 +20,7 @@ Docker Hub API v2 Client
 See: https://docs.docker.com/registry/spec/api/
 """
 
-from ._client import Client
+from ._client import Client, ProtocolError, ProtocolNotSupportedError
 from ._digest import Digest, DigestAlgorithm, InvalidDigestError
 from ._error import Error, ErrorCode
 from ._repository import InvalidRepositoryNameError, Repository

@@ -1,4 +1,6 @@
 include *.toml
 include *.txt
 include *.yml
+include docs/*.rst
+include docs/conf.py
 include tox.ini

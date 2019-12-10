@@ -1,5 +1,10 @@
-txdockerhub: Docker Hub API Client
-==================================
+.. ranger-deploy documentation master file, created by
+   sphinx-quickstart on Wed Dec  4 12:06:11 2019.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+ranger-deploy
+=============
 
 .. image:: https://github.com/wsanchez/txdockerhub/workflows/CI%2fCD/badge.svg
     :target: https://github.com/wsanchez/txdockerhub/actions
@@ -13,7 +18,16 @@ txdockerhub: Docker Hub API Client
 
 This module implements an asynchronous client for the `Docker Hub API`_ using Twisted_.
 
-.. ------------------------------------------------------------------------- ..
 
-.. _Twisted: https://twistedmatrix.com/
-.. _Docker Hub API: https://docs.docker.com/registry/spec/api/
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   api
+
+Navigation
+----------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
