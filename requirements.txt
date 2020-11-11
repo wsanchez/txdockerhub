@@ -24,5 +24,5 @@ PyHamcrest==2.0.2
 requests==2.24.0
 service-identity==18.1.0
 six==1.15.0
-urllib3==1.25.9
+urllib3==1.26.0
 zope.interface==5.1.0
