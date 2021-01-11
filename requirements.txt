@@ -3,7 +3,7 @@
 # Direct dependencies
 attrs==19.3.0
 Click==7.1.2
-hyperlink==19.0.0
+hyperlink==21.0.0
 pyOpenSSL==19.1.0
 Twisted==20.3.0
 
