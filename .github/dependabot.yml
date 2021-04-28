@@ -1,0 +1,22 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "13:00"
+  open-pull-requests-limit: 10
+  allow:
+  - dependency-type: direct
+  - dependency-type: indirect
+  ignore:
+  - dependency-name: zope-interface
+    versions:
+    - 5.2.0
+    - 5.3.0
+  - dependency-name: urllib3
+    versions:
+    - 1.26.3
+  - dependency-name: cffi
+    versions:
+    - 1.14.4
